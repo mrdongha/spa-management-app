@@ -1,0 +1,93 @@
+{% extends 'sales/base.html' %}
+{% load humanize %}  {# ✅ ĐÃ SỬA LẠI DÒNG NÀY #}
+{% block title %}Báo cáo Kinh doanh{% endblock %}
+
+{% block content %}
+<h1>Báo cáo Kinh doanh</h1>
+<hr>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">Tổng Doanh thu</h5>
+                <p class="card-text fs-2 fw-bold">{{ total_revenue|intcomma }}đ</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-bg-info">
+            <div class="card-body">
+                <h5 class="card-title">Doanh thu Hôm nay</h5>
+                <p class="card-text fs-2 fw-bold">{{ revenue_today|intcomma }}đ</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-bg-secondary">
+            <div class="card-body">
+                <h5 class="card-title">Khách hàng mới (Tháng này)</h5>
+                <p class="card-text fs-2 fw-bold">{{ new_customers_this_month }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Doanh thu 30 ngày qua</h5>
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Top Dịch vụ</h5>
+                <ul class="list-group list-group-flush">
+                    {% for service in top_services %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ service.service__name }}
+                        <span class="badge bg-primary rounded-pill">{{ service.count }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item">Chưa có dữ liệu.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    const ctx = document.getElementById('revenueChart');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [{
+                label: 'Doanh thu (VND)',
+                data: {{ chart_data|safe }},
+                fill: false,
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value, index, values) {
+                            return new Intl.NumberFormat('vi-VN').format(value) + 'đ';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

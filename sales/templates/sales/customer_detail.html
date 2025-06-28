@@ -1,0 +1,48 @@
+{% extends 'sales/base.html' %}
+{% block title %}Chi tiết: {{ customer.full_name }}{% endblock %}
+
+{% block content %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="{% url 'customer_list' %}" class="btn btn-secondary btn-sm">‹ Quay lại danh sách</a>
+    <a href="{% url 'add_appointment' customer.id %}" class="btn btn-primary">➕ Đặt Lịch hẹn mới</a>
+  </div>
+  
+  <h1>Chi tiết Khách hàng</h1>
+  <p><strong>Họ và tên:</strong> {{ customer.full_name }}</p>
+  <p><strong>Số điện thoại:</strong> {{ customer.phone_number }}</p>
+  <p><strong>Email:</strong> {{ customer.email|default:"Chưa có" }}</p>
+  <hr>
+
+  <h2>Lịch sử Hóa đơn</h2>
+  <table class="table table-hover">...</table>
+
+  <hr>
+  <h2>Các Gói Dịch Vụ Đã Mua</h2>
+  <table class="table">...</table>
+
+  <hr>
+  <h2>Các Lịch hẹn sắp tới</h2>
+  <table class="table">
+      <thead>
+          <tr>
+              <th>Dịch vụ</th>
+              <th>Thời gian Bắt đầu</th>
+              <th>Trạng thái</th>
+          </tr>
+      </thead>
+      <tbody>
+          {% for appt in customer.appointments.all %}
+          <tr>
+              <td>{{ appt.service.name }}</td>
+              <td>{{ appt.start_time|date:"H:i - d/m/Y" }}</td>
+              <td><span class="badge text-bg-info">{{ appt.get_status_display }}</span></td>
+          </tr>
+          {% empty %}
+          <tr>
+              <td colspan="3" class="text-center">Chưa có lịch hẹn nào.</td>
+          </tr>
+          {% endfor %}
+      </tbody>
+  </table>
+
+{% endblock %}

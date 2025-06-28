@@ -1,0 +1,71 @@
+{% extends 'sales/base.html' %}
+{% block title %}Lịch hẹn tổng quan{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center">
+    <h1>Lịch hẹn tổng quan</h1>
+</div>
+<hr>
+
+<div id='calendar'></div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var appointmentModal = new bootstrap.Modal(document.getElementById('appointmentModal'));
+    var modalForm = document.getElementById('appointmentModalForm');
+    
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        events: '/api/all-appointments/',
+        editable: true,
+        dayMaxEvents: true,
+        dateClick: function(info) {
+            fetch("{% url 'appointment_form_content' %}")
+                // ✅ SỬA LẠI ĐÂY: Đọc dữ liệu dạng .json() thay vì .text()
+                .then(response => response.json()) 
+                .then(data => {
+                    // ✅ SỬA LẠI ĐÂY: Lấy đúng phần html_form từ dữ liệu
+                    modalForm.innerHTML = data.html_form; 
+                    
+                    const startTimeField = modalForm.querySelector('#id_start_time');
+                    if (startTimeField) {
+                        const date = new Date(info.dateStr + 'T09:00:00');
+                        const timezoneOffset = date.getTimezoneOffset() * 60000;
+                        const localISOTime = new Date(date - timezoneOffset).toISOString().slice(0, 16);
+                        startTimeField.value = localISOTime;
+                    }
+                    
+                    appointmentModal.show();
+                });
+        }
+    });
+    calendar.render();
+
+    document.getElementById('saveAppointmentBtn').addEventListener('click', function() {
+        const formData = new FormData(modalForm);
+        fetch("{% url 'create_appointment_api' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                appointmentModal.hide();
+                calendar.refetchEvents();
+            } else {
+                alert('Lỗi: ' + JSON.stringify(data.errors));
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

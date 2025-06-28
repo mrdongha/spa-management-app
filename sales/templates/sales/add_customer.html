@@ -1,0 +1,23 @@
+{% extends 'sales/base.html' %}
+{% block title %}Thêm Khách hàng mới{% endblock %}
+{% block content %}
+  <h1>Thêm Khách hàng mới</h1>
+  <hr>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label class="form-label">Họ và tên</label>
+        {{ form.full_name }}
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Số điện thoại</label>
+        {{ form.phone_number }}
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Email</label>
+        {{ form.email }}
+    </div>
+    <button type="submit" class="btn btn-success">Lưu Khách Hàng</button>
+    <a href="{% url 'customer_list' %}" class="btn btn-secondary">Hủy</a>
+  </form>
+{% endblock %}

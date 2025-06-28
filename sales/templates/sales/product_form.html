@@ -1,0 +1,12 @@
+{% extends 'sales/base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+  <a href="{% url 'product_list' %}" class="btn btn-secondary btn-sm mb-3">‹ Quay lại danh sách</a>
+  <h1>{{ title }}</h1>
+  <hr>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-success">Lưu thay đổi</button>
+  </form>
+{% endblock %}
