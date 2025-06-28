@@ -1,15 +1,12 @@
 # config/urls.py
 from django.contrib import admin
 from django.urls import path, include
-from django.contrib.auth import views as auth_views # ✅ THÊM DÒNG NÀY
 
 urlpatterns = [
+    # Đường dẫn cho trang admin
     path('admin/', admin.site.urls),
-    
-    # ✅ THÊM CÁC ĐƯỜNG DẪN NÀY
-    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
 
-    # Đường dẫn đến ứng dụng sales vẫn giữ nguyên
+    # ✅ Dòng này chỉ định rằng khi người dùng truy cập vào trang chủ (ví dụ: https://ten-cua-ban.onrender.com/),
+    # Django sẽ sử dụng các đường dẫn trong tệp 'sales.urls' để xử lý.
     path('', include('sales.urls')),
 ]
