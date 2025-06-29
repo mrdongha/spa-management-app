@@ -26,7 +26,7 @@ urlpatterns = [
     # Package URLs
     path('packages/use/<int:invoice_detail_id>/', views.use_package_view, name='use_package'),
 
-    # ✅ THÊM MỚI: Product URLs
+    # Product URLs
     path('products/', views.product_list_view, name='product_list'),
     path('products/add/', views.add_product_view, name='add_product'),
     path('products/<int:product_id>/edit/', views.edit_product_view, name='edit_product'),
