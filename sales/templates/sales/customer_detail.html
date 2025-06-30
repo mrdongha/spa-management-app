@@ -4,7 +4,9 @@
 {% block content %}
   <div class="d-flex justify-content-between align-items-center mb-3">
     <a href="{% url 'customer_list' %}" class="btn btn-secondary btn-sm">‹ Quay lại danh sách</a>
+    {% if perms.sales.add_appointment %}
     <a href="{% url 'add_appointment' customer.id %}" class="btn btn-primary">➕ Đặt Lịch hẹn mới</a>
+    {% endif %}
   </div>
   
   <h1>Chi tiết Khách hàng</h1>
@@ -14,19 +16,87 @@
   <hr>
 
   <h2>Lịch sử Hóa đơn</h2>
-  <table class="table table-hover">...</table>
+  <table class="table table-hover">
+    <thead>
+      <tr>
+        <th>Mã Hóa Đơn</th>
+        <th>Ngày Tạo</th>
+        <th>Tổng Tiền</th>
+        <th>Đã Trả</th>
+        <th class="text-danger">Còn Lại</th>
+        <th>Hành động</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for invoice in invoices %}
+      <tr>
+        <td>#{{ invoice.id }}</td>
+        <td>{{ invoice.created_at|date:"H:i - d/m/Y" }}</td>
+        <td>{{ invoice.final_amount|floatformat:0 }}đ</td>
+        <td>{{ invoice.paid_amount|floatformat:0 }}đ</td>
+        <td class="text-danger fw-bold">{{ invoice.amount_due|floatformat:0 }}đ</td>
+        <td>
+          {% if invoice.status == 'unpaid' and perms.sales.add_payment %}
+            <a href="{% url 'record_payment' invoice.id %}" class="btn btn-sm btn-warning">Thanh toán</a>
+          {% else %}
+            <span class="badge text-bg-success">Hoàn thành</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="text-center">Khách hàng này chưa có hóa đơn nào.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 
   <hr>
   <h2>Các Gói Dịch Vụ Đã Mua</h2>
-  <table class="table">...</table>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Tên Gói</th>
+                <th>Tổng số buổi</th>
+                <th>Đã dùng</th>
+                <th>Còn lại</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for detail in customer_invoice_details_packages %}
+            <tr>
+                <td>{{ detail.service_package.name }}</td>
+                <td>{{ detail.service_package.total_sessions }}</td>
+                <td>{{ detail.times_used }}</td>
+                <td>{{ detail.sessions_left }}</td>
+                <td>
+                    {% if detail.sessions_left > 0 and perms.sales.add_packageusagehistory %}
+                    <form action="{% url 'use_package' detail.id %}" method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-info">Sử dụng</button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted">Đã hết</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center">Khách hàng chưa mua gói dịch vụ nào.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
   <hr>
-  <h2>Các Lịch hẹn sắp tới</h2>
+  <h2>Các Lịch hẹn</h2>
   <table class="table">
       <thead>
           <tr>
               <th>Dịch vụ</th>
               <th>Thời gian Bắt đầu</th>
+              <th>Nhân viên</th>
               <th>Trạng thái</th>
           </tr>
       </thead>
@@ -35,11 +105,12 @@
           <tr>
               <td>{{ appt.service.name }}</td>
               <td>{{ appt.start_time|date:"H:i - d/m/Y" }}</td>
+              <td>{{ appt.staff.username|default:"N/A" }}</td>
               <td><span class="badge text-bg-info">{{ appt.get_status_display }}</span></td>
           </tr>
           {% empty %}
           <tr>
-              <td colspan="3" class="text-center">Chưa có lịch hẹn nào.</td>
+              <td colspan="4" class="text-center">Chưa có lịch hẹn nào.</td>
           </tr>
           {% endfor %}
       </tbody>
