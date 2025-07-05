@@ -6,8 +6,11 @@ from .models import Customer, Payment, Product, Appointment, Service
 class CustomerForm(forms.ModelForm):
     class Meta:
         model = Customer
-        fields = ['full_name', 'phone_number', 'email']
+        # Thêm 'profile_code' vào đây
+        fields = ['profile_code', 'full_name', 'phone_number', 'email']
         widgets = {
+            # Thêm widget cho 'profile_code'
+            'profile_code': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nhập mã hồ sơ (nếu có)'}),
             'full_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nhập họ và tên'}),
             'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nhập số điện thoại'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Nhập email (không bắt buộc)'}),

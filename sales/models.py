@@ -6,6 +6,9 @@ from django.db.models import F
 from decimal import Decimal
 
 class Customer(models.Model):
+    # DÒNG MỚI ĐƯỢC THÊM VÀO
+    profile_code = models.CharField(max_length=50, unique=True, blank=True, null=True, help_text="Mã hồ sơ hoặc mã khách hàng thân thiết")
+    
     full_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15, unique=True)
     email = models.EmailField(blank=True, null=True)
@@ -94,7 +97,7 @@ class PackageUsageHistory(models.Model):
 class Payment(models.Model):
     PAYMENT_CHOICES = [('cash', 'Tiền mặt'), ('card', 'Thẻ'), ('transfer', 'Chuyển khoản'),]
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payments')
-    amount_paid = models.DecimalField(max_digits=12, decimal_places=2) # <<< ĐÃ SỬA TÊN TRƯỜNG TẠI ĐÂY
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2)
     payment_method = models.CharField(max_length=50, choices=PAYMENT_CHOICES)
     payment_time = models.DateTimeField(default=timezone.now)
     def __str__(self):
