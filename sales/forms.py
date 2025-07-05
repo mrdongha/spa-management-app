@@ -1,7 +1,7 @@
 # sales/forms.py
 
 from django import forms
-from .models import Customer, Payment, Product, Appointment
+from .models import Customer, Payment, Product, Appointment, Service
 
 class CustomerForm(forms.ModelForm):
     class Meta:
@@ -30,15 +30,24 @@ class ProductForm(forms.ModelForm):
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'price': forms.NumberInput(attrs={'class': 'form-control'}),
         }
+        
+class ServiceForm(forms.ModelForm):
+    class Meta:
+        model = Service
+        fields = ['name', 'price', 'description', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
 
 class AppointmentForm(forms.ModelForm):
     class Meta:
         model = Appointment
-        # <<< ĐÃ SỬA: Bỏ 'date_time', thay bằng 'start_time' và 'end_time'
         fields = ['customer', 'start_time', 'end_time', 'service', 'status']
         widgets = {
             'customer': forms.Select(attrs={'class': 'form-control'}),
-            # <<< ĐÃ SỬA: Thêm widget cho cả hai trường thời gian
             'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'service': forms.Select(attrs={'class': 'form-control'}),
@@ -48,11 +57,9 @@ class AppointmentForm(forms.ModelForm):
 class ModalAppointmentForm(forms.ModelForm):
     class Meta:
         model = Appointment
-        # <<< ĐÃ SỬA: Bỏ 'date_time', thay bằng 'start_time' và 'end_time'
         fields = ['customer', 'start_time', 'end_time', 'service', 'status']
         widgets = {
             'customer': forms.HiddenInput(),
-             # <<< ĐÃ SỬA: Thêm widget cho cả hai trường thời gian
             'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'service': forms.Select(attrs={'class': 'form-control'}),

@@ -14,6 +14,11 @@ urlpatterns = [
     path('customers/add/', views.add_customer_view, name='add_customer'),
     path('customers/<int:customer_id>/', views.customer_detail_view, name='customer_detail'),
 
+    # Quản lý dịch vụ
+    path('services/', views.service_list_view, name='service_list'),
+    path('services/add/', views.add_service_view, name='add_service'),
+    path('services/<int:service_id>/edit/', views.edit_service_view, name='edit_service'),
+
     # Quản lý sản phẩm
     path('products/', views.product_list_view, name='product_list'),
     path('products/add/', views.add_product_view, name='add_product'),

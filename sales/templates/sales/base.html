@@ -21,6 +21,11 @@
                 {% if perms.sales.view_payment %}
                 <a class="nav-link" href="{% url 'reports' %}">📊 Báo cáo</a>
                 {% endif %}
+                
+                {% if perms.sales.view_service %}
+                <a class="nav-link" href="{% url 'service_list' %}">💅 Dịch vụ</a>
+                {% endif %}
+                
                 {% if perms.sales.view_product %}
                 <a class="nav-link" href="{% url 'product_list' %}">📦 Sản phẩm</a>
                 {% endif %}
