@@ -6,7 +6,7 @@ from .models import Customer, Appointment, Invoice, Service
 from .forms import CustomerForm, AppointmentForm, ModalAppointmentForm
 
 # ==============================================================================
-# CÁC HÀM CẦN THIẾT CHO DỰ ÁN
+# CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
 # ==============================================================================
 
 def dashboard_view(request):
@@ -63,7 +63,7 @@ def add_appointment_view(request):
     return render(request, 'sales/add_appointment.html', context)
 
 # ==============================================================================
-# HÀM API CHO LỊCH
+# CÁC HÀM VIEW CHO API VÀ CÁC THÀNH PHẦN PHỤ
 # ==============================================================================
 
 def all_appointments_json(request):
@@ -73,7 +73,6 @@ def all_appointments_json(request):
     appointments = Appointment.objects.all().select_related('customer', 'service')
     data = []
     for appointment in appointments:
-        # Kiểm tra xem dịch vụ có tồn tại không để tránh lỗi
         service_name = appointment.service.name if appointment.service else "Dịch vụ đã xóa"
         data.append({
             'title': f"{appointment.customer.full_name} - {service_name}",
@@ -82,3 +81,11 @@ def all_appointments_json(request):
             'id': appointment.id,
         })
     return JsonResponse(data, safe=False)
+
+def appointment_form_content(request):
+    """
+    Hàm này trả về nội dung HTML của form đặt lịch hẹn (ModalAppointmentForm).
+    """
+    form = ModalAppointmentForm()
+    # Yêu cầu phải có file template tại: sales/templates/sales/partials/appointment_form_modal.html
+    return render(request, 'sales/partials/appointment_form_modal.html', {'form': form})
