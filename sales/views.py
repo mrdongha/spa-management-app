@@ -2,9 +2,11 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from .models import Customer, Appointment, Invoice, Service
+from .models import Customer, Appointment, Invoice, Service, Voucher
 from .forms import CustomerForm, AppointmentForm, ModalAppointmentForm
-import json # <<< THÊM DÒNG NÀY VÀO ĐẦU FILE
+from django.utils import timezone
+from decimal import Decimal
+import json
 
 # ==============================================================================
 # CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
@@ -98,13 +100,8 @@ def create_appointment_api(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            # Giả định dữ liệu gửi lên có các key tương ứng với model Appointment
-            # Cần xử lý và xác thực dữ liệu này cẩn thận hơn trong thực tế
-            customer_id = data.get('customer')
-            service_id = data.get('service')
-            
-            customer = Customer.objects.get(id=customer_id)
-            service = Service.objects.get(id=service_id)
+            customer = Customer.objects.get(id=data.get('customer'))
+            service = Service.objects.get(id=data.get('service'))
 
             appointment = Appointment.objects.create(
                 customer=customer,
@@ -117,5 +114,46 @@ def create_appointment_api(request):
             return JsonResponse({'status': 'success', 'message': 'Lịch hẹn đã được tạo thành công!', 'appointment_id': appointment.id})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+def apply_voucher_api(request):
+    """
+    Hàm API để áp dụng voucher vào hóa đơn.
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            voucher_code = data.get('voucher_code')
+            sub_total = Decimal(data.get('sub_total', '0'))
+
+            if not voucher_code:
+                return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập mã voucher.'}, status=400)
+
+            now = timezone.now()
+            voucher = Voucher.objects.get(code__iexact=voucher_code, is_active=True, valid_from__lte=now)
+
+            if voucher.valid_to and voucher.valid_to < now:
+                raise Voucher.DoesNotExist
+
+            discount_amount = Decimal('0')
+            if voucher.discount_type == 'percentage':
+                discount_amount = (sub_total * voucher.value) / 100
+            elif voucher.discount_type == 'fixed':
+                discount_amount = voucher.value
+            
+            final_amount = sub_total - discount_amount
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Áp dụng voucher thành công!',
+                'discount_amount': str(discount_amount),
+                'final_amount': str(final_amount),
+            })
+
+        except Voucher.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Mã voucher không hợp lệ hoặc đã hết hạn.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': 'Có lỗi xảy ra: ' + str(e)}, status=400)
     
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
