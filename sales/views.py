@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from .models import Customer, Appointment, Invoice, Service
 from .forms import CustomerForm, AppointmentForm, ModalAppointmentForm
+import json # <<< THÊM DÒNG NÀY VÀO ĐẦU FILE
 
 # ==============================================================================
 # CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
@@ -46,13 +47,13 @@ def report_view(request):
 
 def add_appointment_view(request):
     """
-    Hàm để thêm một lịch hẹn mới.
+    Hàm để thêm một lịch hẹn mới (dạng trang riêng).
     """
     if request.method == 'POST':
         form = AppointmentForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('dashboard_view') # Chuyển hướng về trang dashboard sau khi lưu
+            return redirect('dashboard_view')
     else:
         form = AppointmentForm()
 
@@ -89,3 +90,32 @@ def appointment_form_content(request):
     form = ModalAppointmentForm()
     # Yêu cầu phải có file template tại: sales/templates/sales/partials/appointment_form_modal.html
     return render(request, 'sales/partials/appointment_form_modal.html', {'form': form})
+
+def create_appointment_api(request):
+    """
+    Hàm API để tạo lịch hẹn từ form trong modal.
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            # Giả định dữ liệu gửi lên có các key tương ứng với model Appointment
+            # Cần xử lý và xác thực dữ liệu này cẩn thận hơn trong thực tế
+            customer_id = data.get('customer')
+            service_id = data.get('service')
+            
+            customer = Customer.objects.get(id=customer_id)
+            service = Service.objects.get(id=service_id)
+
+            appointment = Appointment.objects.create(
+                customer=customer,
+                service=service,
+                start_time=data.get('start_time'),
+                end_time=data.get('end_time'),
+                notes=data.get('notes', ''),
+                status='scheduled'
+            )
+            return JsonResponse({'status': 'success', 'message': 'Lịch hẹn đã được tạo thành công!', 'appointment_id': appointment.id})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
