@@ -17,6 +17,18 @@
             </div>
 
             <div class="mb-4">
+                <label class="form-label fw-bold">{{ form.gift_cards.label }}</label>
+                <div class="border rounded p-3">
+                    {% for card in form.gift_cards.field.queryset %}
+                    <div class="form-check">
+                        <input class="form-check-input item-checkbox" type="checkbox" name="{{ form.gift_cards.name }}" value="{{ card.pk }}" id="gift_card_{{ card.pk }}" data-price="{{ card.value }}">
+                        <label class="form-check-label" for="gift_card_{{ card.pk }}">{{ card.name }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mb-4">
                 <label class="form-label fw-bold">{{ form.products.label }}</label>
                 <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
                     {% for product in form.products.field.queryset %}
@@ -61,7 +73,7 @@
         </div>
 
         <div class="col-md-4">
-            <div class="card">
+            <div class="card position-sticky" style="top: 1rem;">
                 <div class="card-body">
                     <h5 class="card-title">Tổng Cộng</h5>
                     <div class="d-flex justify-content-between mb-2">
@@ -104,7 +116,10 @@ document.addEventListener('DOMContentLoaded', function() {
         let currentSubtotal = 0;
         checkboxes.forEach(function(checkbox) {
             if (checkbox.checked) {
-                currentSubtotal += parseFloat(checkbox.dataset.price);
+                const price = parseFloat(checkbox.dataset.price);
+                if (!isNaN(price)) {
+                    currentSubtotal += price;
+                }
             }
         });
         
