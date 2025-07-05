@@ -2,13 +2,10 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
-from django.db.models import F
 from decimal import Decimal
 
 class Customer(models.Model):
-    # DÒNG MỚI ĐƯỢC THÊM VÀO
     profile_code = models.CharField(max_length=50, unique=True, blank=True, null=True, help_text="Mã hồ sơ hoặc mã khách hàng thân thiết")
-    
     full_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15, unique=True)
     email = models.EmailField(blank=True, null=True)
@@ -55,6 +52,15 @@ class Product(models.Model):
     def __str__(self):
         return f"{self.name} (Tồn kho: {self.quantity_in_stock})"
 
+# --- MODEL MỚI CHO THẺ TRẢ TRƯỚC ---
+class GiftCard(models.Model):
+    name = models.CharField(max_length=100, help_text="Ví dụ: Thẻ 10 triệu")
+    value = models.DecimalField(max_digits=12, decimal_places=2, help_text="Giá trị của thẻ, ví dụ: 10000000")
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.name} - {self.value:,.0f}đ"
+
 class Invoice(models.Model):
     STATUS_CHOICES = [('unpaid', 'Chưa thanh toán'), ('paid', 'Đã thanh toán'), ('cancelled', 'Đã hủy'),]
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='invoices')
@@ -76,6 +82,7 @@ class InvoiceDetail(models.Model):
     product = models.ForeignKey(Product, on_delete=models.PROTECT, null=True, blank=True)
     service = models.ForeignKey(Service, on_delete=models.PROTECT, null=True, blank=True)
     service_package = models.ForeignKey(ServicePackage, on_delete=models.PROTECT, null=True, blank=True)
+    gift_card = models.ForeignKey(GiftCard, on_delete=models.PROTECT, null=True, blank=True) # Thêm liên kết thẻ
     item_type = models.CharField(max_length=20, default='service')
     quantity = models.PositiveIntegerField(default=1)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
@@ -84,6 +91,7 @@ class InvoiceDetail(models.Model):
         if self.item_type == 'service': item_name = self.service.name
         elif self.item_type == 'package': item_name = self.service_package.name
         elif self.item_type == 'product': item_name = self.product.name
+        elif self.item_type == 'gift_card': item_name = self.gift_card.name # Thêm logic thẻ
         return f"{item_name} (x{self.quantity}) on Invoice #{self.invoice.id}"
 
 class PackageUsageHistory(models.Model):

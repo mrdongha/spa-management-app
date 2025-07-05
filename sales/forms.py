@@ -1,7 +1,8 @@
 # sales/forms.py
 
 from django import forms
-from .models import Customer, Payment, Product, Appointment, Service, ServicePackage
+# THÊM 'GiftCard' VÀO DÒNG IMPORT DƯỚI ĐÂY
+from .models import Customer, Payment, Product, Appointment, Service, ServicePackage, GiftCard
 
 class CustomerForm(forms.ModelForm):
     class Meta:
@@ -81,17 +82,24 @@ class InvoiceForm(forms.Form):
         queryset=Product.objects.filter(is_active=True, quantity_in_stock__gt=0),
         label="Chọn Sản Phẩm",
         required=False,
-        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+        widget=forms.CheckboxSelectMultiple
     )
     services = forms.ModelMultipleChoiceField(
         queryset=Service.objects.filter(is_active=True),
         label="Chọn Dịch Vụ Lẻ",
         required=False,
-        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+        widget=forms.CheckboxSelectMultiple
     )
     packages = forms.ModelMultipleChoiceField(
         queryset=ServicePackage.objects.filter(is_active=True),
         label="Chọn Gói Dịch Vụ",
         required=False,
-        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'})
+        widget=forms.CheckboxSelectMultiple
+    )
+    # --- TRƯỜNG MỚI CHỌN THẺ TRẢ TRƯỚC ---
+    gift_cards = forms.ModelMultipleChoiceField(
+        queryset=GiftCard.objects.filter(is_active=True),
+        label="Chọn Thẻ Trả Trước",
+        required=False,
+        widget=forms.CheckboxSelectMultiple
     )
