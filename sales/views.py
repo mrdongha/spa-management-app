@@ -353,3 +353,23 @@ def apply_voucher_api(request):
             })
         except Voucher.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Voucher không hợp lệ hoặc đã hết hạn.'}, status=400)
+        # sales/views.py
+
+# ... (giữ nguyên tất cả các dòng import và các hàm đã có) ...
+
+from django.shortcuts import render
+from .models import Invoice
+
+# ... (giữ nguyên các hàm view khác của bạn) ...
+
+# DÁN HÀM MỚI NÀY VÀO CUỐI FILE
+def report_view(request):
+    paid_invoices = Invoice.objects.filter(status='paid').order_by('-created_at')
+    total_revenue = sum(invoice.final_amount for invoice in paid_invoices)
+    
+    context = {
+        'invoices': paid_invoices,
+        'total_revenue': total_revenue,
+        'invoice_count': paid_invoices.count()
+    }
+    return render(request, 'sales/reports.html', context)
