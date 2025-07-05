@@ -1,93 +1,56 @@
 {% extends 'sales/base.html' %}
-{% load humanize %}  {# ✅ ĐÃ SỬA LẠI DÒNG NÀY #}
-{% block title %}Báo cáo Kinh doanh{% endblock %}
+
+{% block title %}Báo cáo & Thống kê{% endblock %}
 
 {% block content %}
-<h1>Báo cáo Kinh doanh</h1>
-<hr>
-
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card text-bg-primary">
-            <div class="card-body">
-                <h5 class="card-title">Tổng Doanh thu</h5>
-                <p class="card-text fs-2 fw-bold">{{ total_revenue|intcomma }}đ</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-bg-info">
-            <div class="card-body">
-                <h5 class="card-title">Doanh thu Hôm nay</h5>
-                <p class="card-text fs-2 fw-bold">{{ revenue_today|intcomma }}đ</p>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card text-bg-secondary">
-            <div class="card-body">
-                <h5 class="card-title">Khách hàng mới (Tháng này)</h5>
-                <p class="card-text fs-2 fw-bold">{{ new_customers_this_month }}</p>
-            </div>
-        </div>
-    </div>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Báo cáo & Thống kê</h1>
 </div>
 
 <div class="row">
-    <div class="col-md-9">
-        <div class="card">
+    <div class="col-md-6 mb-3">
+        <div class="card text-center">
             <div class="card-body">
-                <h5 class="card-title">Doanh thu 30 ngày qua</h5>
-                <canvas id="revenueChart"></canvas>
+                <h5 class="card-title">Tổng Doanh Thu</h5>
+                <p class="card-text fs-3 fw-bold text-success">{{ total_revenue|floatformat:0 }}đ</p>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
-        <div class="card">
+    <div class="col-md-6 mb-3">
+        <div class="card text-center">
             <div class="card-body">
-                <h5 class="card-title">Top Dịch vụ</h5>
-                <ul class="list-group list-group-flush">
-                    {% for service in top_services %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ service.service__name }}
-                        <span class="badge bg-primary rounded-pill">{{ service.count }}</span>
-                    </li>
-                    {% empty %}
-                    <li class="list-group-item">Chưa có dữ liệu.</li>
-                    {% endfor %}
-                </ul>
+                <h5 class="card-title">Tổng Số Hóa Đơn Đã Thanh Toán</h5>
+                <p class="card-text fs-3 fw-bold text-primary">{{ invoice_count }}</p>
             </div>
         </div>
     </div>
 </div>
 
-
-<script>
-    const ctx = document.getElementById('revenueChart');
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: {{ chart_labels|safe }},
-            datasets: [{
-                label: 'Doanh thu (VND)',
-                data: {{ chart_data|safe }},
-                fill: false,
-                borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value, index, values) {
-                            return new Intl.NumberFormat('vi-VN').format(value) + 'đ';
-                        }
-                    }
-                }
-            }
-        }
-    });
-</script>
+<h2 class="mt-4">Chi tiết các hóa đơn đã thanh toán</h2>
+<div class="table-responsive">
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr>
+                <th scope="col">ID Hóa Đơn</th>
+                <th scope="col">Khách Hàng</th>
+                <th scope="col">Ngày Tạo</th>
+                <th scope="col">Tổng Tiền</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for invoice in invoices %}
+            <tr>
+                <td>#{{ invoice.id }}</td>
+                <td>{{ invoice.customer.full_name }}</td>
+                <td>{{ invoice.created_at|date:"d/m/Y H:i" }}</td>
+                <td>{{ invoice.final_amount|floatformat:0 }}đ</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center">Chưa có hóa đơn nào được thanh toán.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}
