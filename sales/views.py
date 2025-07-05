@@ -2,7 +2,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from .models import Customer, Appointment, Invoice, Service, Voucher, Product, Payment
+from .models import Customer, Appointment, Invoice, Service, Voucher, Product, Payment, InvoiceDetail, PackageUsageHistory
 from .forms import CustomerForm, AppointmentForm, ModalAppointmentForm, PaymentForm
 from django.utils import timezone
 from decimal import Decimal
@@ -69,9 +69,6 @@ def create_invoice_view(request):
     return render(request, 'sales/create_invoice.html', context)
 
 def record_payment_view(request, invoice_id):
-    """
-    Hàm để ghi nhận thanh toán cho một hóa đơn.
-    """
     invoice = get_object_or_404(Invoice, id=invoice_id)
     if request.method == 'POST':
         form = PaymentForm(request.POST)
@@ -79,22 +76,36 @@ def record_payment_view(request, invoice_id):
             payment = form.save(commit=False)
             payment.invoice = invoice
             payment.save()
-            
-            # Cập nhật số tiền đã trả của hóa đơn
             invoice.paid_amount += payment.amount_paid
             if invoice.paid_amount >= invoice.final_amount:
                 invoice.status = 'paid'
             invoice.save()
-            
-            return redirect('invoice_detail', invoice_id=invoice.id) # Giả sử có URL name là 'invoice_detail'
+            return redirect('invoice_detail', invoice_id=invoice.id)
     else:
         form = PaymentForm()
-        
-    context = {
-        'form': form,
-        'invoice': invoice
-    }
+    context = {'form': form, 'invoice': invoice}
     return render(request, 'sales/record_payment.html', context)
+
+def use_package_view(request, invoice_detail_id):
+    """
+    Hàm để ghi nhận một lần sử dụng gói dịch vụ đã mua.
+    """
+    invoice_detail = get_object_or_404(InvoiceDetail, id=invoice_detail_id)
+    customer = invoice_detail.invoice.customer
+    
+    # Logic kiểm tra xem gói còn lượt sử dụng không nên được thêm ở đây
+    
+    if request.method == 'POST':
+        PackageUsageHistory.objects.create(
+            invoice_detail=invoice_detail,
+            customer=customer,
+            notes=request.POST.get('notes', '')
+        )
+        return redirect('customer_detail', customer_id=customer.id)
+    
+    # Thông thường, hành động này chỉ nên là POST, nên có thể redirect nếu là GET
+    return redirect('customer_detail', customer_id=customer.id)
+
 
 # ==============================================================================
 # CÁC HÀM VIEW CHO API VÀ CÁC THÀNH PHẦN PHỤ
