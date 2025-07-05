@@ -2,7 +2,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from .models import Customer, Appointment, Invoice, Service, Voucher
+from .models import Customer, Appointment, Invoice, Service, Voucher, Product
 from .forms import CustomerForm, AppointmentForm, ModalAppointmentForm
 from django.utils import timezone
 from decimal import Decimal
@@ -21,6 +21,18 @@ def dashboard_view(request):
     }
     # Yêu cầu phải có file template tại: sales/templates/sales/dashboard.html
     return render(request, 'sales/dashboard.html', context)
+
+def customer_list_view(request):
+    """
+    Hàm này để hiển thị trang danh sách khách hàng.
+    """
+    customers = Customer.objects.order_by('-created_at')
+    context = {
+        'page_title': 'Danh sách Khách hàng',
+        'customers': customers,
+    }
+    # Yêu cầu phải có file template tại: sales/templates/sales/customer_list.html
+    return render(request, 'sales/customer_list.html', context)
 
 def calendar_view(request):
     """
