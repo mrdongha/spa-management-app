@@ -87,19 +87,29 @@ def record_payment_view(request, invoice_id):
             payment = form.save(commit=False)
             payment.invoice = invoice
             payment.save()
+            
+            # Cập nhật số tiền đã trả của hóa đơn
             invoice.paid_amount += payment.amount_paid
             if invoice.paid_amount >= invoice.final_amount:
                 invoice.status = 'paid'
             invoice.save()
-            return redirect('invoice_detail', invoice_id=invoice.id)
+            
+            return redirect('invoice_detail', invoice_id=invoice.id) # Giả sử có URL name là 'invoice_detail'
     else:
         form = PaymentForm()
-    context = {'form': form, 'invoice': invoice}
+        
+    context = {
+        'form': form,
+        'invoice': invoice
+    }
     return render(request, 'sales/record_payment.html', context)
 
 def use_package_view(request, invoice_detail_id):
     invoice_detail = get_object_or_404(InvoiceDetail, id=invoice_detail_id)
     customer = invoice_detail.invoice.customer
+    
+    # Logic kiểm tra xem gói còn lượt sử dụng không nên được thêm ở đây
+    
     if request.method == 'POST':
         PackageUsageHistory.objects.create(
             invoice_detail=invoice_detail,
@@ -107,6 +117,8 @@ def use_package_view(request, invoice_detail_id):
             notes=request.POST.get('notes', '')
         )
         return redirect('customer_detail', customer_id=customer.id)
+    
+    # Thông thường, hành động này chỉ nên là POST, nên có thể redirect nếu là GET
     return redirect('customer_detail', customer_id=customer.id)
 
 
@@ -169,4 +181,13 @@ def apply_voucher_api(request):
                 discount_amount = voucher.value
             final_amount = sub_total - discount_amount
             return JsonResponse({
-                'status':
+                'status': 'success',
+                'message': 'Áp dụng voucher thành công!',
+                'discount_amount': str(discount_amount),
+                'final_amount': str(final_amount),
+            })
+        except Voucher.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Mã voucher không hợp lệ hoặc đã hết hạn.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': 'Có lỗi xảy ra: ' + str(e)}, status=400)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
