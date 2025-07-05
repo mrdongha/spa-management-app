@@ -14,7 +14,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-your-default-local-key-for-dev')
 
 # DEBUG sẽ tự động là False khi deploy trên Render.
-# Khi bạn bật lại để gỡ lỗi, hãy tạm thời đổi thành DEBUG = True
 DEBUG = 'RENDER' not in os.environ
 
 
@@ -26,8 +25,7 @@ if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # Thêm 'localhost' để bạn có thể chạy trên máy cá nhân.
-if not DEBUG:
-    ALLOWED_HOSTS.extend(['localhost', '127.0.0.1'])
+ALLOWED_HOSTS.extend(['localhost', '127.0.0.1'])
 
 
 # Application definition
@@ -112,7 +110,7 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-# === BỔ SUNG CẤU HÌNH CÒN THIẾU TẠI ĐÂY ===
+# === CẤU HÌNH QUAN TRỌNG CHO FILE TĨNH ===
 # Đường dẫn Django sẽ thu thập tất cả file tĩnh vào đó khi chạy collectstatic.
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
