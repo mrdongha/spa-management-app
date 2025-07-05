@@ -37,6 +37,17 @@ def customer_detail_view(request, customer_id):
     context = {'page_title': f'Chi tiết: {customer.full_name}', 'customer': customer}
     return render(request, 'sales/customer_detail.html', context)
 
+def product_list_view(request):
+    """
+    Hàm để hiển thị danh sách sản phẩm.
+    """
+    products = Product.objects.filter(is_active=True).order_by('name')
+    context = {
+        'page_title': 'Danh sách sản phẩm',
+        'products': products
+    }
+    return render(request, 'sales/product_list.html', context)
+
 def calendar_view(request):
     context = {'page_title': 'Lịch hẹn'}
     return render(request, 'sales/calendar.html', context)
@@ -87,14 +98,8 @@ def record_payment_view(request, invoice_id):
     return render(request, 'sales/record_payment.html', context)
 
 def use_package_view(request, invoice_detail_id):
-    """
-    Hàm để ghi nhận một lần sử dụng gói dịch vụ đã mua.
-    """
     invoice_detail = get_object_or_404(InvoiceDetail, id=invoice_detail_id)
     customer = invoice_detail.invoice.customer
-    
-    # Logic kiểm tra xem gói còn lượt sử dụng không nên được thêm ở đây
-    
     if request.method == 'POST':
         PackageUsageHistory.objects.create(
             invoice_detail=invoice_detail,
@@ -102,8 +107,6 @@ def use_package_view(request, invoice_detail_id):
             notes=request.POST.get('notes', '')
         )
         return redirect('customer_detail', customer_id=customer.id)
-    
-    # Thông thường, hành động này chỉ nên là POST, nên có thể redirect nếu là GET
     return redirect('customer_detail', customer_id=customer.id)
 
 
@@ -166,13 +169,4 @@ def apply_voucher_api(request):
                 discount_amount = voucher.value
             final_amount = sub_total - discount_amount
             return JsonResponse({
-                'status': 'success',
-                'message': 'Áp dụng voucher thành công!',
-                'discount_amount': str(discount_amount),
-                'final_amount': str(final_amount),
-            })
-        except Voucher.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Mã voucher không hợp lệ hoặc đã hết hạn.'}, status=404)
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': 'Có lỗi xảy ra: ' + str(e)}, status=400)
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+                'status':
