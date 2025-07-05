@@ -11,11 +11,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECRET_KEY sẽ được đọc từ biến môi trường trên Render.
-# Bạn cần tạo một key ngẫu nhiên và thêm vào Environment của Render.
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-your-default-local-key')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-your-default-local-key-for-dev')
 
 # DEBUG sẽ tự động là False khi deploy trên Render.
-DEBUG = True
+# Khi bạn bật lại để gỡ lỗi, hãy tạm thời đổi thành DEBUG = True
+DEBUG = 'RENDER' not in os.environ
+
 
 # Cấu hình ALLOWED_HOSTS tự động cho Render.
 ALLOWED_HOSTS = []
@@ -38,7 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    # Thêm app của bạn ở đây
+    # App của bạn
     'sales',
 ]
 
@@ -59,7 +60,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')], # Thêm dòng này nếu bạn có thư mục templates ở ngoài cùng
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -80,8 +81,6 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': dj_database_url.config(
-        # Mặc định sẽ dùng DATABASE_URL trên Render,
-        # Nếu không có, sẽ dùng sqlite để chạy local.
         default=f'sqlite:///{BASE_DIR / "db.sqlite3"}',
         conn_max_age=600
     )
@@ -113,9 +112,12 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-# Cấu hình này chỉ chạy khi deploy (khi DEBUG=False)
+# === BỔ SUNG CẤU HÌNH CÒN THIẾU TẠI ĐÂY ===
+# Đường dẫn Django sẽ thu thập tất cả file tĩnh vào đó khi chạy collectstatic.
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Bật tính năng lưu trữ của WhiteNoise khi không ở chế độ DEBUG.
 if not DEBUG:
-    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 
