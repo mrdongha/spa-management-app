@@ -34,6 +34,25 @@ def customer_list_view(request):
     # Yêu cầu phải có file template tại: sales/templates/sales/customer_list.html
     return render(request, 'sales/customer_list.html', context)
 
+def add_customer_view(request):
+    """
+    Hàm để thêm một khách hàng mới.
+    """
+    if request.method == 'POST':
+        form = CustomerForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('customer_list') # Chuyển hướng về trang danh sách khách hàng
+    else:
+        form = CustomerForm()
+
+    context = {
+        'form': form,
+        'page_title': 'Thêm khách hàng mới'
+    }
+    # Yêu cầu phải có file template tại: sales/templates/sales/add_customer.html
+    return render(request, 'sales/add_customer.html', context)
+
 def calendar_view(request):
     """
     Hàm này để hiển thị trang lịch hẹn.
