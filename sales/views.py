@@ -6,8 +6,28 @@ from .models import Customer, Appointment, Invoice, Service
 from .forms import CustomerForm, AppointmentForm, ModalAppointmentForm
 
 # ==============================================================================
-# ĐÂY LÀ CÁC HÀM CÒN THIẾU GÂY RA LỖI
+# CÁC HÀM CẦN THIẾT CHO DỰ ÁN
 # ==============================================================================
+
+def dashboard_view(request):
+    """
+    Hàm ví dụ cho trang dashboard chính.
+    """
+    context = {
+        'page_title': 'Trang tổng quan'
+    }
+    # Yêu cầu phải có file template tại: sales/templates/sales/dashboard.html
+    return render(request, 'sales/dashboard.html', context)
+
+def calendar_view(request):
+    """
+    Hàm này để hiển thị trang lịch hẹn.
+    """
+    context = {
+        'page_title': 'Lịch hẹn'
+    }
+    # Yêu cầu phải có file template tại: sales/templates/sales/calendar.html
+    return render(request, 'sales/calendar.html', context)
 
 def report_view(request):
     """
@@ -23,40 +43,6 @@ def report_view(request):
     }
     # Yêu cầu phải có file template tại: sales/templates/sales/reports.html
     return render(request, 'sales/reports.html', context)
-
-
-def all_appointments_json(request):
-    """
-    Hàm này cung cấp dữ liệu lịch hẹn dưới dạng JSON cho calendar.
-    """
-    appointments = Appointment.objects.all().select_related('customer', 'service')
-    data = []
-    for appointment in appointments:
-        # Kiểm tra xem dịch vụ có tồn tại không để tránh lỗi
-        service_name = appointment.service.name if appointment.service else "Dịch vụ đã xóa"
-        data.append({
-            'title': f"{appointment.customer.full_name} - {service_name}",
-            'start': appointment.start_time.isoformat(),
-            'end': appointment.end_time.isoformat(),
-            'id': appointment.id,
-        })
-    return JsonResponse(data, safe=False)
-
-# ==============================================================================
-# CÁC HÀM KHÁC CÓ THỂ BẠN ĐANG DÙNG (DỰA THEO GỢI Ý LỖI)
-# ==============================================================================
-
-def dashboard_view(request):
-    """
-    Một hàm ví dụ cho trang dashboard chính.
-    Bạn có thể thay đổi nội dung hàm này cho phù hợp với dự án.
-    """
-    context = {
-        'page_title': 'Trang tổng quan'
-    }
-    # Yêu cầu phải có file template tại: sales/templates/sales/dashboard.html
-    return render(request, 'sales/dashboard.html', context)
-
 
 def add_appointment_view(request):
     """
@@ -76,4 +62,23 @@ def add_appointment_view(request):
     # Yêu cầu phải có file template tại: sales/templates/sales/add_appointment.html
     return render(request, 'sales/add_appointment.html', context)
 
-# Thêm các hàm view khác của bạn ở đây nếu có...
+# ==============================================================================
+# HÀM API CHO LỊCH
+# ==============================================================================
+
+def all_appointments_json(request):
+    """
+    Hàm này cung cấp dữ liệu lịch hẹn dưới dạng JSON cho calendar.
+    """
+    appointments = Appointment.objects.all().select_related('customer', 'service')
+    data = []
+    for appointment in appointments:
+        # Kiểm tra xem dịch vụ có tồn tại không để tránh lỗi
+        service_name = appointment.service.name if appointment.service else "Dịch vụ đã xóa"
+        data.append({
+            'title': f"{appointment.customer.full_name} - {service_name}",
+            'start': appointment.start_time.isoformat(),
+            'end': appointment.end_time.isoformat(),
+            'id': appointment.id,
+        })
+    return JsonResponse(data, safe=False)
