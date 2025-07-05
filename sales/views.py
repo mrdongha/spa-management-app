@@ -46,9 +46,6 @@ def product_list_view(request):
     return render(request, 'sales/product_list.html', context)
 
 def add_product_view(request):
-    """
-    Hàm để thêm một sản phẩm mới.
-    """
     if request.method == 'POST':
         form = ProductForm(request.POST)
         if form.is_valid():
@@ -61,6 +58,24 @@ def add_product_view(request):
         'page_title': 'Thêm sản phẩm mới'
     }
     return render(request, 'sales/add_product.html', context)
+
+def edit_product_view(request, product_id):
+    """
+    Hàm để sửa thông tin một sản phẩm.
+    """
+    product = get_object_or_404(Product, id=product_id)
+    if request.method == 'POST':
+        form = ProductForm(request.POST, instance=product)
+        if form.is_valid():
+            form.save()
+            return redirect('product_list')
+    else:
+        form = ProductForm(instance=product)
+    context = {
+        'form': form,
+        'page_title': f'Sửa sản phẩm: {product.name}'
+    }
+    return render(request, 'sales/edit_product.html', context)
 
 def calendar_view(request):
     context = {'page_title': 'Lịch hẹn'}
