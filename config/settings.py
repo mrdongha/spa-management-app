@@ -14,7 +14,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-your-default-local-key-for-dev')
 
 # DEBUG sẽ tự động là False khi deploy trên Render.
-DEBUG = True 
+DEBUG = 'RENDER' not in os.environ
 
 
 # Cấu hình ALLOWED_HOSTS tự động cho Render.
