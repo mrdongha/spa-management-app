@@ -2,8 +2,8 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
-from .models import Customer, Appointment, Invoice, Service, Voucher, Product
-from .forms import CustomerForm, AppointmentForm, ModalAppointmentForm
+from .models import Customer, Appointment, Invoice, Service, Voucher, Product, Payment
+from .forms import CustomerForm, AppointmentForm, ModalAppointmentForm, PaymentForm
 from django.utils import timezone
 from decimal import Decimal
 import json
@@ -63,19 +63,38 @@ def add_appointment_view(request):
     return render(request, 'sales/add_appointment.html', context)
 
 def create_invoice_view(request):
-    """
-    Hàm để tạo một hóa đơn mới.
-    """
-    # Đây là một hàm giữ chỗ cơ bản. Bạn sẽ cần phát triển logic phức tạp hơn ở đây.
     if request.method == 'POST':
-        # Xử lý logic tạo hóa đơn từ dữ liệu POST
-        # Ví dụ: customer_id = request.POST.get('customer') ...
-        # Sau khi tạo xong, chuyển hướng đến trang chi tiết hóa đơn
-        # new_invoice = Invoice.objects.create(...)
-        # return redirect('invoice_detail', invoice_id=new_invoice.id)
-        pass
+        pass # Xử lý logic tạo hóa đơn phức tạp ở đây
     context = {'page_title': 'Tạo hóa đơn mới'}
     return render(request, 'sales/create_invoice.html', context)
+
+def record_payment_view(request, invoice_id):
+    """
+    Hàm để ghi nhận thanh toán cho một hóa đơn.
+    """
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    if request.method == 'POST':
+        form = PaymentForm(request.POST)
+        if form.is_valid():
+            payment = form.save(commit=False)
+            payment.invoice = invoice
+            payment.save()
+            
+            # Cập nhật số tiền đã trả của hóa đơn
+            invoice.paid_amount += payment.amount_paid
+            if invoice.paid_amount >= invoice.final_amount:
+                invoice.status = 'paid'
+            invoice.save()
+            
+            return redirect('invoice_detail', invoice_id=invoice.id) # Giả sử có URL name là 'invoice_detail'
+    else:
+        form = PaymentForm()
+        
+    context = {
+        'form': form,
+        'invoice': invoice
+    }
+    return render(request, 'sales/record_payment.html', context)
 
 # ==============================================================================
 # CÁC HÀM VIEW CHO API VÀ CÁC THÀNH PHẦN PHỤ
