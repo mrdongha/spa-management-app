@@ -53,6 +53,18 @@ def add_customer_view(request):
     # Yêu cầu phải có file template tại: sales/templates/sales/add_customer.html
     return render(request, 'sales/add_customer.html', context)
 
+def customer_detail_view(request, customer_id):
+    """
+    Hàm này để xem chi tiết thông tin một khách hàng.
+    """
+    customer = get_object_or_404(Customer, id=customer_id)
+    context = {
+        'page_title': f'Chi tiết: {customer.full_name}',
+        'customer': customer,
+    }
+    # Yêu cầu phải có file template tại: sales/templates/sales/customer_detail.html
+    return render(request, 'sales/customer_detail.html', context)
+
 def calendar_view(request):
     """
     Hàm này để hiển thị trang lịch hẹn.
@@ -145,7 +157,7 @@ def create_appointment_api(request):
             return JsonResponse({'status': 'success', 'message': 'Lịch hẹn đã được tạo thành công!', 'appointment_id': appointment.id})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-    
+
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
 def apply_voucher_api(request):
@@ -172,9 +184,9 @@ def apply_voucher_api(request):
                 discount_amount = (sub_total * voucher.value) / 100
             elif voucher.discount_type == 'fixed':
                 discount_amount = voucher.value
-            
+
             final_amount = sub_total - discount_amount
-            
+
             return JsonResponse({
                 'status': 'success',
                 'message': 'Áp dụng voucher thành công!',
@@ -186,5 +198,5 @@ def apply_voucher_api(request):
             return JsonResponse({'status': 'error', 'message': 'Mã voucher không hợp lệ hoặc đã hết hạn.'}, status=404)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': 'Có lỗi xảy ra: ' + str(e)}, status=400)
-    
+
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
