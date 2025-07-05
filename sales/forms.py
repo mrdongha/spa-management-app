@@ -1,3 +1,5 @@
+# sales/forms.py
+
 from django import forms
 from .models import Customer, Payment, Product, Appointment
 
@@ -32,10 +34,13 @@ class ProductForm(forms.ModelForm):
 class AppointmentForm(forms.ModelForm):
     class Meta:
         model = Appointment
-        fields = ['customer', 'date_time', 'service', 'status']
+        # <<< ĐÃ SỬA: Bỏ 'date_time', thay bằng 'start_time' và 'end_time'
+        fields = ['customer', 'start_time', 'end_time', 'service', 'status']
         widgets = {
             'customer': forms.Select(attrs={'class': 'form-control'}),
-            'date_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            # <<< ĐÃ SỬA: Thêm widget cho cả hai trường thời gian
+            'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'service': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
         }
@@ -43,10 +48,13 @@ class AppointmentForm(forms.ModelForm):
 class ModalAppointmentForm(forms.ModelForm):
     class Meta:
         model = Appointment
-        fields = ['customer', 'date_time', 'service', 'status']
+        # <<< ĐÃ SỬA: Bỏ 'date_time', thay bằng 'start_time' và 'end_time'
+        fields = ['customer', 'start_time', 'end_time', 'service', 'status']
         widgets = {
             'customer': forms.HiddenInput(),
-            'date_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+             # <<< ĐÃ SỬA: Thêm widget cho cả hai trường thời gian
+            'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'service': forms.Select(attrs={'class': 'form-control'}),
             'status': forms.HiddenInput(),
         }

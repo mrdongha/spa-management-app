@@ -94,11 +94,11 @@ class PackageUsageHistory(models.Model):
 class Payment(models.Model):
     PAYMENT_CHOICES = [('cash', 'Tiền mặt'), ('card', 'Thẻ'), ('transfer', 'Chuyển khoản'),]
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payments')
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2) # <<< ĐÃ SỬA TÊN TRƯỜNG TẠI ĐÂY
     payment_method = models.CharField(max_length=50, choices=PAYMENT_CHOICES)
     payment_time = models.DateTimeField(default=timezone.now)
     def __str__(self):
-        return f"Thanh toán {self.amount} cho hóa đơn #{self.invoice.id}"
+        return f"Thanh toán {self.amount_paid} cho hóa đơn #{self.invoice.id}"
 
 class Appointment(models.Model):
     STATUS_CHOICES = [('scheduled', 'Đã lên lịch'), ('completed', 'Đã hoàn thành'), ('cancelled', 'Đã hủy'),]
