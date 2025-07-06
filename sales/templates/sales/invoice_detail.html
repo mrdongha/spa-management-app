@@ -6,23 +6,9 @@
 <style>
     /* CSS để tối ưu hóa trang in */
     @media print {
-        /* Ẩn các thành phần không cần thiết khi in */
-        body > nav, /* Ẩn thanh menu trên cùng */
-        .btn, /* Ẩn tất cả các nút */
-        .d-flex.justify-content-between.align-items-center { /* Ẩn dòng tiêu đề và nút */
-            display: none !important;
-        }
-
-        /* Đảm bảo nội dung hóa đơn sử dụng toàn bộ trang in */
-        .container {
-            max-width: 100% !important;
-            width: 100% !important;
-        }
-
-        .card {
-            border: none !important;
-            box-shadow: none !important;
-        }
+        body > nav, .btn, .d-flex.justify-content-between.align-items-center { display: none !important; }
+        .container { max-width: 100% !important; width: 100% !important; }
+        .card { border: none !important; box-shadow: none !important; }
     }
 </style>
 
@@ -43,14 +29,12 @@
         </div>
         <ul class="list-group list-group-flush">
             <li class="list-group-item"><strong>Khách hàng:</strong> {{ invoice.customer.full_name }}</li>
+            <li class="list-group-item"><strong>Số dư tín dụng:</strong> <span class="fw-bold text-primary">{{ invoice.customer.credit_balance|floatformat:0 }}đ</span></li>
             <li class="list-group-item"><strong>Ngày tạo:</strong> {{ invoice.created_at|date:"d/m/Y H:i" }}</li>
             <li class="list-group-item"><strong>Trạng thái:</strong> 
-                {% if invoice.status == 'paid' %}
-                    <span class="badge bg-success">Đã thanh toán</span>
-                {% elif invoice.status == 'unpaid' %}
-                    <span class="badge bg-warning text-dark">Chưa thanh toán</span>
-                {% else %}
-                    <span class="badge bg-danger">Đã hủy</span>
+                {% if invoice.status == 'paid' %}<span class="badge bg-success">Đã thanh toán</span>
+                {% elif invoice.status == 'unpaid' %}<span class="badge bg-warning text-dark">Chưa thanh toán</span>
+                {% else %}<span class="badge bg-danger">Đã hủy</span>
                 {% endif %}
             </li>
         </ul>
@@ -75,7 +59,6 @@
                             {% if detail.product %}{{ detail.product.name }}{% endif %}
                             {% if detail.service %}{{ detail.service.name }}{% endif %}
                             {% if detail.service_package %}{{ detail.service_package.name }}{% endif %}
-                            {% if detail.gift_card %}{{ detail.gift_card.name }}{% endif %}
                         </td>
                         <td class="text-end">{{ detail.unit_price|floatformat:0 }}đ</td>
                     </tr>
@@ -86,11 +69,3 @@
         <div class="card-footer">
             <div class="d-flex justify-content-end"><strong class="me-3">Tạm tính:</strong> {{ invoice.sub_total|floatformat:0 }}đ</div>
             <div class="d-flex justify-content-end text-danger"><strong class="me-3">Giảm giá:</strong> -{{ invoice.discount_amount|floatformat:0 }}đ</div>
-            <hr>
-            <div class="d-flex justify-content-end fs-5 fw-bold"><strong class="me-3">Thành tiền:</strong> {{ invoice.final_amount|floatformat:0 }}đ</div>
-            <div class="d-flex justify-content-end fs-5 fw-bold text-success"><strong class="me-3">Đã thanh toán:</strong> {{ invoice.paid_amount|floatformat:0 }}đ</div>
-            <div class="d-flex justify-content-end fs-5 fw-bold text-danger"><strong class="me-3">Còn lại:</strong> {{ invoice.amount_due|floatformat:0 }}đ</div>
-        </div>
-    </div>
-</div>
-{% endblock %}

@@ -1,7 +1,6 @@
 # sales/forms.py
 
 from django import forms
-# THÊM 'GiftCard' VÀO DÒNG IMPORT DƯỚI ĐÂY
 from .models import Customer, Payment, Product, Appointment, Service, ServicePackage, GiftCard
 
 class CustomerForm(forms.ModelForm):
@@ -71,7 +70,7 @@ class ModalAppointmentForm(forms.ModelForm):
             'status': forms.HiddenInput(),
         }
 
-# --- FORM TẠO HÓA ĐƠN MỚI ---
+# --- FORM TẠO HÓA ĐƠN ĐÃ ĐƯỢC CẬP NHẬT ---
 class InvoiceForm(forms.Form):
     customer = forms.ModelChoiceField(
         queryset=Customer.objects.order_by('full_name'),
@@ -96,10 +95,11 @@ class InvoiceForm(forms.Form):
         required=False,
         widget=forms.CheckboxSelectMultiple
     )
-    # --- TRƯỜNG MỚI CHỌN THẺ TRẢ TRƯỚC ---
-    gift_cards = forms.ModelMultipleChoiceField(
+    # Sửa trường này để dùng radio buttons và không bắt buộc
+    gift_card = forms.ModelChoiceField(
         queryset=GiftCard.objects.filter(is_active=True),
-        label="Chọn Thẻ Trả Trước",
+        label="Thanh toán bằng cách mua Thẻ Trả Trước",
         required=False,
-        widget=forms.CheckboxSelectMultiple
+        widget=forms.RadioSelect,
+        empty_label=None # Bỏ lựa chọn rỗng
     )
