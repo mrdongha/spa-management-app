@@ -20,11 +20,11 @@
         <form method="post">
             {% csrf_token %}
             <div class="mb-3">
-                <label for="{{ form.amount_paid.id_for_label }}" class="form-label">Số tiền thanh toán</label>
+                <label for="{{ form.amount_paid.id_for_label }}" class="form-label fw-bold">Số tiền thanh toán</label>
                 {{ form.amount_paid }}
             </div>
             <div class="mb-3">
-                <label for="{{ form.payment_method.id_for_label }}" class="form-label">Phương thức thanh toán</label>
+                <label for="{{ form.payment_method.id_for_label }}" class="form-label fw-bold">Phương thức thanh toán</label>
                 {{ form.payment_method }}
             </div>
             <button type="submit" class="btn btn-success">Xác nhận thanh toán</button>

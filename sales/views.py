@@ -14,7 +14,7 @@ from django.utils import timezone
 from decimal import Decimal
 import json
 from django.db import transaction
-from django.core.paginator import Paginator # Thêm import cho Paginator
+from django.core.paginator import Paginator
 
 # ==============================================================================
 # CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
@@ -27,16 +27,10 @@ def dashboard_view(request):
 # --- Quản lý Khách hàng ---
 def customer_list_view(request):
     customer_list = Customer.objects.order_by('-created_at')
-    
-    # Thiết lập phân trang, 20 khách hàng mỗi trang
     paginator = Paginator(customer_list, 20) 
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
-    context = {
-        'page_title': 'Danh sách Khách hàng', 
-        'customers': page_obj # Truyền đối tượng trang vào template
-    }
+    context = {'page_title': 'Danh sách Khách hàng', 'customers': page_obj}
     return render(request, 'sales/customer_list.html', context)
 
 def add_customer_view(request):
@@ -145,14 +139,11 @@ def create_invoice_view(request):
                 services = form.cleaned_data['services']
                 packages = form.cleaned_data['packages']
                 gift_card_payment = form.cleaned_data['gift_card']
-
                 sub_total = sum(p.price for p in products)
                 sub_total += sum(s.price for s in services)
                 sub_total += sum(pkg.price for pkg in packages)
                 final_amount = sub_total
-
                 paid_amount = gift_card_payment.value if gift_card_payment else Decimal('0')
-
                 invoice = Invoice.objects.create(
                     customer=customer,
                     sub_total=sub_total,
@@ -160,13 +151,11 @@ def create_invoice_view(request):
                     paid_amount=paid_amount,
                     status='paid' if paid_amount >= final_amount else 'unpaid'
                 )
-
                 for item in list(products) + list(services) + list(packages):
                     item_type = ''
                     if isinstance(item, Product): item_type = 'product'
                     elif isinstance(item, Service): item_type = 'service'
                     elif isinstance(item, ServicePackage): item_type = 'package'
-                    
                     InvoiceDetail.objects.create(
                         invoice=invoice,
                         product=item if item_type == 'product' else None,
@@ -176,16 +165,13 @@ def create_invoice_view(request):
                         quantity=1,
                         unit_price=item.price
                     )
-                
                 if paid_amount > final_amount:
                     overpayment = paid_amount - final_amount
                     customer.credit_balance += overpayment
                     customer.save()
-
                 return redirect('invoice_detail', invoice_id=invoice.id)
     else:
         form = InvoiceForm()
-    
     context = {'page_title': 'Tạo hóa đơn mới', 'form': form}
     return render(request, 'sales/create_invoice.html', context)
     
@@ -201,13 +187,11 @@ def record_payment_view(request, invoice_id):
                 amount_due_before_payment = invoice.amount_due
                 paid_this_transaction = payment.amount_paid
                 invoice.paid_amount += paid_this_transaction
-                
                 if paid_this_transaction > amount_due_before_payment:
                     overpayment = paid_this_transaction - amount_due_before_payment
                     customer = invoice.customer
                     customer.credit_balance += overpayment
                     customer.save()
-                
                 if invoice.paid_amount >= invoice.final_amount:
                     invoice.status = 'paid'
                 invoice.save()
@@ -256,33 +240,4 @@ def create_appointment_api(request):
             data = json.loads(request.body)
             customer = Customer.objects.get(id=data.get('customer'))
             service = Service.objects.get(id=data.get('service'))
-            appointment = Appointment.objects.create(customer=customer, service=service, start_time=data.get('start_time'), end_time=data.get('end_time'), notes=data.get('notes', ''), status='scheduled')
-            return JsonResponse({'status': 'success', 'message': 'Lịch hẹn đã được tạo thành công!', 'appointment_id': appointment.id})
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
-    
-def apply_voucher_api(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            voucher_code = data.get('voucher_code')
-            sub_total = Decimal(data.get('sub_total', '0'))
-            if not voucher_code:
-                return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập mã voucher.'}, status=400)
-            now = timezone.now()
-            voucher = Voucher.objects.get(code__iexact=voucher_code, is_active=True, valid_from__lte=now)
-            if voucher.valid_to and voucher.valid_to < now:
-                raise Voucher.DoesNotExist
-            discount_amount = Decimal('0')
-            if voucher.discount_type == 'percentage':
-                discount_amount = (sub_total * voucher.value) / 100
-            elif voucher.discount_type == 'fixed':
-                discount_amount = voucher.value
-            final_amount = sub_total - discount_amount
-            return JsonResponse({'status': 'success', 'message': 'Áp dụng voucher thành công!', 'discount_amount': str(discount_amount), 'final_amount': str(final_amount)})
-        except Voucher.DoesNotExist:
-            return JsonResponse({'status': 'error', 'message': 'Mã voucher không hợp lệ hoặc đã hết hạn.'}, status=404)
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': 'Có lỗi xảy ra: ' + str(e)}, status=400)
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+            appointment = Appointment.objects.create(customer=customer, service=service, start_time=data.get('start_time'), end_time
