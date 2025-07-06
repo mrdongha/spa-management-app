@@ -2,11 +2,18 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse
-from .models import Customer, Appointment, Invoice, Service, Voucher, Product, Payment, InvoiceDetail, PackageUsageHistory, ServicePackage, GiftCard
-from .forms import CustomerForm, AppointmentForm, ModalAppointmentForm, PaymentForm, ProductForm, ServiceForm, InvoiceForm
+from .models import (
+    Customer, Appointment, Invoice, Service, Voucher, Product, 
+    Payment, InvoiceDetail, PackageUsageHistory, ServicePackage, GiftCard
+)
+from .forms import (
+    CustomerForm, AppointmentForm, ModalAppointmentForm, PaymentForm, 
+    ProductForm, ServiceForm, InvoiceForm
+)
 from django.utils import timezone
 from decimal import Decimal
 import json
+from django.db import transaction
 
 # ==============================================================================
 # CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
@@ -119,12 +126,37 @@ def add_appointment_view(request):
     return render(request, 'sales/add_appointment.html', context)
     
 def create_invoice_view(request):
-    # Dòng 'else:' bị lỗi đã được tích hợp đúng vào đây
     if request.method == 'POST':
         form = InvoiceForm(request.POST)
         if form.is_valid():
-            # Xử lý logic tạo hóa đơn phức tạp sẽ được thêm ở đây
-            pass
+            with transaction.atomic():
+                customer = form.cleaned_data['customer']
+                
+                # Tính tổng tiền từ các mục đã chọn
+                sub_total = sum(p.price for p in form.cleaned_data['products'])
+                sub_total += sum(s.price for s in form.cleaned_data['services'])
+                sub_total += sum(pkg.price for pkg in form.cleaned_data['packages'])
+                sub_total += sum(gc.value for gc in form.cleaned_data['gift_cards'])
+
+                # Tạo hóa đơn chính
+                invoice = Invoice.objects.create(
+                    customer=customer,
+                    sub_total=sub_total,
+                    final_amount=sub_total # Tạm thời chưa xử lý voucher
+                )
+
+                # Thêm các chi tiết hóa đơn
+                for product in form.cleaned_data['products']:
+                    InvoiceDetail.objects.create(invoice=invoice, product=product, item_type='product', quantity=1, unit_price=product.price)
+                for service in form.cleaned_data['services']:
+                    InvoiceDetail.objects.create(invoice=invoice, service=service, item_type='service', quantity=1, unit_price=service.price)
+                for package in form.cleaned_data['packages']:
+                    InvoiceDetail.objects.create(invoice=invoice, service_package=package, item_type='package', quantity=1, unit_price=package.price)
+                for card in form.cleaned_data['gift_cards']:
+                    InvoiceDetail.objects.create(invoice=invoice, gift_card=card, item_type='gift_card', quantity=1, unit_price=card.value)
+
+                # Chuyển hướng đến trang chi tiết hóa đơn (giả sử có)
+                return redirect('dashboard') # Hoặc trang chi tiết hóa đơn
     else:
         form = InvoiceForm()
 
@@ -146,7 +178,9 @@ def record_payment_view(request, invoice_id):
             if invoice.paid_amount >= invoice.final_amount:
                 invoice.status = 'paid'
             invoice.save()
-            return redirect('invoice_detail', invoice_id=invoice.id)
+            # Giả sử có URL name là 'invoice_detail'
+            # return redirect('invoice_detail', invoice_id=invoice.id) 
+            return redirect('dashboard')
     else:
         form = PaymentForm()
     context = {'form': form, 'invoice': invoice}
