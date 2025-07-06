@@ -134,23 +134,27 @@ def create_invoice_view(request):
         form = InvoiceForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
-                customer = form.cleaned_data['customer']
+                customer_data = form.cleaned_data['customer']
                 products = form.cleaned_data['products']
                 services = form.cleaned_data['services']
                 packages = form.cleaned_data['packages']
                 gift_card_payment = form.cleaned_data['gift_card']
+
                 sub_total = sum(p.price for p in products)
                 sub_total += sum(s.price for s in services)
                 sub_total += sum(pkg.price for pkg in packages)
                 final_amount = sub_total
+
                 paid_amount = gift_card_payment.value if gift_card_payment else Decimal('0')
+
                 invoice = Invoice.objects.create(
-                    customer=customer,
+                    customer=customer_data,
                     sub_total=sub_total,
                     final_amount=final_amount,
                     paid_amount=paid_amount,
                     status='paid' if paid_amount >= final_amount else 'unpaid'
                 )
+
                 for item in list(products) + list(services) + list(packages):
                     item_type = ''
                     if isinstance(item, Product): item_type = 'product'
@@ -165,13 +169,18 @@ def create_invoice_view(request):
                         quantity=1,
                         unit_price=item.price
                     )
+                
                 if paid_amount > final_amount:
                     overpayment = paid_amount - final_amount
-                    customer.credit_balance += overpayment
-                    customer.save()
+                    # Lấy lại đối tượng khách hàng từ DB và khóa lại để cập nhật
+                    customer_to_update = Customer.objects.select_for_update().get(pk=customer_data.pk)
+                    customer_to_update.credit_balance += overpayment
+                    customer_to_update.save()
+
                 return redirect('invoice_detail', invoice_id=invoice.id)
     else:
         form = InvoiceForm()
+    
     context = {'page_title': 'Tạo hóa đơn mới', 'form': form}
     return render(request, 'sales/create_invoice.html', context)
     
@@ -188,27 +197,22 @@ def record_payment_view(request, invoice_id):
                 
                 # Chỉ xử lý nếu có thanh toán
                 if paid_this_transaction > 0:
-                    # Tạo bản ghi thanh toán
                     Payment.objects.create(
                         invoice=invoice,
                         amount_paid=paid_this_transaction,
                         payment_method=form.cleaned_data['payment_method']
                     )
                     
-                    # Cập nhật số tiền đã trả của hóa đơn
                     invoice.paid_amount += paid_this_transaction
                     
-                    # Xử lý tiền thừa và cộng vào tín dụng
                     if paid_this_transaction > amount_due_before_payment:
                         overpayment = paid_this_transaction - amount_due_before_payment
                         
-                        # Lấy lại đối tượng khách hàng từ DB để đảm bảo dữ liệu mới nhất
-                        # và khóa lại để tránh xung đột
+                        # Lấy lại đối tượng khách hàng từ DB và khóa lại để cập nhật
                         customer_to_update = Customer.objects.select_for_update().get(pk=invoice.customer.pk)
                         customer_to_update.credit_balance += overpayment
                         customer_to_update.save()
 
-                # Cập nhật trạng thái hóa đơn sau cùng
                 if invoice.paid_amount >= invoice.final_amount:
                     invoice.status = 'paid'
                 
