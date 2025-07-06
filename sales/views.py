@@ -16,7 +16,9 @@ import json
 from django.db import transaction
 from django.core.paginator import Paginator
 from django.db.models import Sum, Q
+from django.db.models.functions import TruncDate, TruncMonth
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 
 # ==============================================================================
 # CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
@@ -140,6 +142,7 @@ def calendar_view(request):
 @login_required
 def report_view(request):
     paid_invoices = Invoice.objects.filter(status='paid')
+    
     total_revenue = paid_invoices.aggregate(total=Sum('final_amount'))['total'] or 0
     invoice_count = paid_invoices.count()
 
