@@ -15,7 +15,6 @@ class CustomerForm(forms.ModelForm):
         }
 
 class PaymentForm(forms.ModelForm):
-    # Thêm một trường mới không thuộc model để nhập số tiền tín dụng muốn dùng
     use_credit = forms.DecimalField(
         max_digits=12, 
         decimal_places=2,
@@ -23,10 +22,8 @@ class PaymentForm(forms.ModelForm):
         required=False,
         widget=forms.NumberInput(attrs={'class': 'form-control'})
     )
-
     class Meta:
         model = Payment
-        # amount_paid bây giờ sẽ là số tiền trả bằng các phương thức khác (tiền mặt, thẻ...)
         fields = ['amount_paid', 'payment_method']
         labels = {
             'amount_paid': 'Số tiền trả thêm (Tiền mặt/Thẻ/CK)'
@@ -76,3 +73,41 @@ class ModalAppointmentForm(forms.ModelForm):
         model = Appointment
         fields = ['customer', 'start_time', 'end_time', 'service', 'status']
         widgets = {
+            'customer': forms.HiddenInput(),
+            'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
+            'service': forms.Select(attrs={'class': 'form-control'}),
+            'status': forms.HiddenInput(),
+        }
+
+class InvoiceForm(forms.Form):
+    customer = forms.ModelChoiceField(
+        queryset=Customer.objects.order_by('full_name'),
+        label="Chọn Khách Hàng",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    products = forms.ModelMultipleChoiceField(
+        queryset=Product.objects.filter(is_active=True, quantity_in_stock__gt=0),
+        label="Chọn Sản Phẩm",
+        required=False,
+        widget=forms.CheckboxSelectMultiple
+    )
+    services = forms.ModelMultipleChoiceField(
+        queryset=Service.objects.filter(is_active=True),
+        label="Chọn Dịch Vụ Lẻ",
+        required=False,
+        widget=forms.CheckboxSelectMultiple
+    )
+    packages = forms.ModelMultipleChoiceField(
+        queryset=ServicePackage.objects.filter(is_active=True),
+        label="Chọn Gói Dịch Vụ",
+        required=False,
+        widget=forms.CheckboxSelectMultiple
+    )
+    gift_card = forms.ModelChoiceField(
+        queryset=GiftCard.objects.filter(is_active=True),
+        label="Thanh toán bằng cách mua Thẻ Trả Trước",
+        required=False,
+        widget=forms.RadioSelect,
+        empty_label=None
+    )
