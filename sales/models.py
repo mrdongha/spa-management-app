@@ -9,10 +9,7 @@ class Customer(models.Model):
     full_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15, unique=True)
     email = models.EmailField(blank=True, null=True)
-    
-    # === TRƯỜNG MỚI ĐỂ LƯU TIỀN TÍCH ĐIỂM ===
     credit_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Số dư tín dụng/tiền tích điểm của khách")
-    
     created_at = models.DateTimeField(default=timezone.now)
     def __str__(self):
         return f"{self.full_name} ({self.phone_number})"
@@ -113,5 +110,15 @@ class Payment(models.Model):
     def __str__(self):
         return f"Thanh toán {self.amount_paid} cho hóa đơn #{self.invoice.id}"
 
+# === MODEL APPOINTMENT ĐÃ ĐƯỢC SỬA LẠI CHO ĐÚNG ===
 class Appointment(models.Model):
     STATUS_CHOICES = [('scheduled', 'Đã lên lịch'), ('completed', 'Đã hoàn thành'), ('cancelled', 'Đã hủy'),]
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='appointments')
+    service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True)
+    staff = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='appointments')
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='scheduled')
+    notes = models.TextField(blank=True, null=True)
+    def __str__(self):
+        return f"Lịch hẹn cho {self.customer.full_name} lúc {self.start_time.strftime('%H:%M %d/%m/%Y')}"
