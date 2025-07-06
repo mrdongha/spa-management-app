@@ -1,8 +1,8 @@
 # sales/views.py
-from django.http import HttpResponse
+
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
-from .models import Customer, Appointment, Invoice, Service, Voucher, Product, Payment, InvoiceDetail, PackageUsageHistory, ServicePackage
+from django.http import JsonResponse, HttpResponse
+from .models import Customer, Appointment, Invoice, Service, Voucher, Product, Payment, InvoiceDetail, PackageUsageHistory, ServicePackage, GiftCard
 from .forms import CustomerForm, AppointmentForm, ModalAppointmentForm, PaymentForm, ProductForm, ServiceForm, InvoiceForm
 from django.utils import timezone
 from decimal import Decimal
@@ -119,9 +119,12 @@ def add_appointment_view(request):
     return render(request, 'sales/add_appointment.html', context)
     
 def create_invoice_view(request):
-    # Hàm này chỉ dùng để kiểm tra
-    # Nó sẽ bỏ qua tất cả form và template, chỉ trả về một dòng chữ.
-    return HttpResponse("<h1>KIỂM TRA: NẾU BẠN THẤY DÒNG NÀY, VIEW ĐÃ CHẠY ĐÚNG.</h1>")
+    # Dòng 'else:' bị lỗi đã được tích hợp đúng vào đây
+    if request.method == 'POST':
+        form = InvoiceForm(request.POST)
+        if form.is_valid():
+            # Xử lý logic tạo hóa đơn phức tạp sẽ được thêm ở đây
+            pass
     else:
         form = InvoiceForm()
 
