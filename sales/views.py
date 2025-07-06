@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from .models import (
     Customer, Appointment, Invoice, Service, Voucher, Product, 
-    Payment, InvoiceDetail, PackageUsageHistory, ServicePackage, GiftCard
+    Payment, InvoiceDetail, PackageUsageHistory, ServicePackage, GiftCard, User
 )
 from .forms import (
     CustomerForm, AppointmentForm, ModalAppointmentForm, PaymentForm, 
@@ -16,17 +16,19 @@ import json
 from django.db import transaction
 from django.core.paginator import Paginator
 from django.db.models import Sum, Q
-from django.db.models.functions import TruncDate, TruncMonth
+from django.contrib.auth.decorators import login_required
 
 # ==============================================================================
 # CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
 # ==============================================================================
 
+@login_required
 def dashboard_view(request):
     context = {'page_title': 'Trang tổng quan'}
     return render(request, 'sales/dashboard.html', context)
 
 # --- Quản lý Khách hàng ---
+@login_required
 def customer_list_view(request):
     customer_list = Customer.objects.annotate(
         total_spent=Sum('invoices__final_amount', filter=Q(invoices__status='paid'))
@@ -42,6 +44,7 @@ def customer_list_view(request):
     }
     return render(request, 'sales/customer_list.html', context)
 
+@login_required
 def add_customer_view(request):
     if request.method == 'POST':
         form = CustomerForm(request.POST)
@@ -53,6 +56,7 @@ def add_customer_view(request):
     context = {'form': form, 'page_title': 'Thêm khách hàng mới'}
     return render(request, 'sales/add_customer.html', context)
 
+@login_required
 def customer_detail_view(request, customer_id):
     customer = get_object_or_404(Customer, id=customer_id)
     usage_history = PackageUsageHistory.objects.filter(customer=customer).order_by('-used_at')
@@ -64,11 +68,13 @@ def customer_detail_view(request, customer_id):
     return render(request, 'sales/customer_detail.html', context)
 
 # --- Quản lý Dịch vụ ---
+@login_required
 def service_list_view(request):
     services = Service.objects.order_by('name')
     context = {'page_title': 'Danh sách Dịch vụ', 'services': services}
     return render(request, 'sales/service_list.html', context)
 
+@login_required
 def add_service_view(request):
     if request.method == 'POST':
         form = ServiceForm(request.POST)
@@ -80,6 +86,7 @@ def add_service_view(request):
     context = {'form': form, 'page_title': 'Thêm Dịch vụ mới'}
     return render(request, 'sales/add_service.html', context)
 
+@login_required
 def edit_service_view(request, service_id):
     service = get_object_or_404(Service, id=service_id)
     if request.method == 'POST':
@@ -93,11 +100,13 @@ def edit_service_view(request, service_id):
     return render(request, 'sales/edit_service.html', context)
     
 # --- Quản lý Sản phẩm ---
+@login_required
 def product_list_view(request):
     products = Product.objects.filter(is_active=True).order_by('name')
     context = { 'page_title': 'Danh sách sản phẩm', 'products': products }
     return render(request, 'sales/product_list.html', context)
 
+@login_required
 def add_product_view(request):
     if request.method == 'POST':
         form = ProductForm(request.POST)
@@ -109,6 +118,7 @@ def add_product_view(request):
     context = { 'form': form, 'page_title': 'Thêm sản phẩm mới' }
     return render(request, 'sales/add_product.html', context)
 
+@login_required
 def edit_product_view(request, product_id):
     product = get_object_or_404(Product, id=product_id)
     if request.method == 'POST':
@@ -122,24 +132,22 @@ def edit_product_view(request, product_id):
     return render(request, 'sales/edit_product.html', context)
     
 # --- Các trang chức năng khác ---
+@login_required
 def calendar_view(request):
     context = {'page_title': 'Lịch hẹn'}
     return render(request, 'sales/calendar.html', context)
 
+@login_required
 def report_view(request):
     paid_invoices = Invoice.objects.filter(status='paid')
-    
-    # Tính toán tổng quan
     total_revenue = paid_invoices.aggregate(total=Sum('final_amount'))['total'] or 0
     invoice_count = paid_invoices.count()
 
-    # Thống kê doanh thu theo ngày
     daily_revenue = paid_invoices.annotate(day=TruncDate('created_at')) \
                                  .values('day') \
                                  .annotate(daily_total=Sum('final_amount')) \
                                  .order_by('-day')
 
-    # Thống kê doanh thu theo tháng
     monthly_revenue = paid_invoices.annotate(month=TruncMonth('created_at')) \
                                    .values('month') \
                                    .annotate(monthly_total=Sum('final_amount')) \
@@ -154,6 +162,7 @@ def report_view(request):
     }
     return render(request, 'sales/reports.html', context)
     
+@login_required
 def add_appointment_view(request):
     if request.method == 'POST':
         form = AppointmentForm(request.POST)
@@ -165,12 +174,14 @@ def add_appointment_view(request):
     context = {'form': form}
     return render(request, 'sales/add_appointment.html', context)
     
+@login_required
 def create_invoice_view(request):
     if request.method == 'POST':
         form = InvoiceForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
                 customer_data = form.cleaned_data['customer']
+                staff_data = form.cleaned_data['staff'] # Lấy nhân viên từ form
                 customer_to_update = Customer.objects.select_for_update().get(pk=customer_data.pk)
                 products = form.cleaned_data['products']
                 services = form.cleaned_data['services']
@@ -178,16 +189,13 @@ def create_invoice_view(request):
                 gift_card_payment = form.cleaned_data['gift_card']
                 final_amount = sum(p.price for p in products) + sum(s.price for s in services) + sum(pkg.price for pkg in packages)
                 
-                # Logic mới: Tự động dùng tín dụng
                 amount_paid_from_credit = min(customer_to_update.credit_balance, final_amount)
-                
-                # Logic mua thẻ trả trước
                 payment_for_gift_card = gift_card_payment.value if gift_card_payment else Decimal('0')
-
                 paid_amount = amount_paid_from_credit + payment_for_gift_card
 
                 invoice = Invoice.objects.create(
                     customer=customer_to_update,
+                    staff=staff_data, # Gán nhân viên đã chọn
                     sub_total=final_amount,
                     final_amount=final_amount,
                     paid_amount=paid_amount,
@@ -219,6 +227,7 @@ def create_invoice_view(request):
     context = {'page_title': 'Tạo hóa đơn mới', 'form': form}
     return render(request, 'sales/create_invoice.html', context)
     
+@login_required
 def record_payment_view(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
     customer = invoice.customer
@@ -234,25 +243,21 @@ def record_payment_view(request, invoice_id):
                 customer_to_update = Customer.objects.select_for_update().get(pk=customer.pk)
                 amount_due = invoice.amount_due
                 
-                # 1. Thanh toán bằng tín dụng
                 actual_credit_paid = min(credit_to_use, customer_to_update.credit_balance, amount_due)
                 if actual_credit_paid > 0:
                     customer_to_update.credit_balance -= actual_credit_paid
                     invoice.paid_amount += actual_credit_paid
                     Payment.objects.create(invoice=invoice, amount_paid=actual_credit_paid, payment_method='credit')
 
-                # 2. Thanh toán bằng phương thức khác
                 if other_payment_amount > 0:
                     invoice.paid_amount += other_payment_amount
                     Payment.objects.create(invoice=invoice, amount_paid=other_payment_amount, payment_method=other_payment_method)
                 
-                # 3. Xử lý tiền thừa (nếu có)
                 if invoice.paid_amount > invoice.final_amount:
                     overpayment = invoice.paid_amount - invoice.final_amount
                     customer_to_update.credit_balance += overpayment
                     invoice.paid_amount = invoice.final_amount
                 
-                # 4. Cập nhật trạng thái
                 if invoice.paid_amount >= invoice.final_amount:
                     invoice.status = 'paid'
                 
@@ -266,11 +271,13 @@ def record_payment_view(request, invoice_id):
     context = {'form': form, 'invoice': invoice, 'customer': customer}
     return render(request, 'sales/record_payment.html', context)
 
+@login_required
 def invoice_detail_view(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
     context = {'page_title': f'Chi tiết hóa đơn #{invoice.id}', 'invoice': invoice}
     return render(request, 'sales/invoice_detail.html', context)
     
+@login_required
 def use_package_view(request, invoice_detail_id):
     invoice_detail = get_object_or_404(InvoiceDetail, id=invoice_detail_id)
     customer = invoice_detail.invoice.customer
@@ -299,6 +306,7 @@ def appointment_form_content(request):
     form = ModalAppointmentForm()
     return render(request, 'sales/partials/appointment_form_modal.html', {'form': form})
     
+@login_required
 def create_appointment_api(request):
     if request.method == 'POST':
         try:
@@ -311,6 +319,7 @@ def create_appointment_api(request):
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
     
+@login_required
 def apply_voucher_api(request):
     if request.method == 'POST':
         try:

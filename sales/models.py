@@ -63,6 +63,10 @@ class GiftCard(models.Model):
 class Invoice(models.Model):
     STATUS_CHOICES = [('unpaid', 'Chưa thanh toán'), ('paid', 'Đã thanh toán'), ('cancelled', 'Đã hủy'),]
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='invoices')
+    
+    # === TRƯỜNG MỚI CHO NHÂN VIÊN TƯ VẤN ===
+    staff = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='invoices_created')
+    
     voucher_applied = models.ForeignKey(Voucher, on_delete=models.SET_NULL, null=True, blank=True)
     sub_total = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Tổng tiền trước giảm giá")
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -102,7 +106,6 @@ class PackageUsageHistory(models.Model):
         return f"Khách {self.customer.full_name} dùng gói #{self.invoice_detail.id} lúc {self.used_at}"
 
 class Payment(models.Model):
-    # === THÊM LỰA CHỌN THANH TOÁN BẰNG TÍN DỤNG ===
     PAYMENT_CHOICES = [
         ('cash', 'Tiền mặt'), 
         ('card', 'Thẻ'), 

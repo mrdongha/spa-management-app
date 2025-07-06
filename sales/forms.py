@@ -2,6 +2,7 @@
 
 from django import forms
 from .models import Customer, Payment, Product, Appointment, Service, ServicePackage, GiftCard
+from django.contrib.auth.models import User
 
 class CustomerForm(forms.ModelForm):
     class Meta:
@@ -80,10 +81,17 @@ class ModalAppointmentForm(forms.ModelForm):
             'status': forms.HiddenInput(),
         }
 
+# --- FORM TẠO HÓA ĐƠN ĐÃ ĐƯỢC CẬP NHẬT ---
 class InvoiceForm(forms.Form):
     customer = forms.ModelChoiceField(
         queryset=Customer.objects.order_by('full_name'),
         label="Chọn Khách Hàng",
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    # === TRƯỜNG MỚI ĐỂ CHỌN NHÂN VIÊN ===
+    staff = forms.ModelChoiceField(
+        queryset=User.objects.filter(is_staff=True), # Lấy tất cả user là nhân viên
+        label="Chọn Nhân viên tư vấn",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
     products = forms.ModelMultipleChoiceField(
