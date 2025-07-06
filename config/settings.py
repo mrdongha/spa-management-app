@@ -37,13 +37,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # === THÊM DÒNG NÀY VÀO ===
+    'django.contrib.humanize',
     # App của bạn
     'sales',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    # Thêm WhiteNoise Middleware ngay sau SecurityMiddleware
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -109,12 +110,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = '/static/'
-
-# === CẤU HÌNH QUAN TRỌNG CHO FILE TĨNH ===
-# Đường dẫn Django sẽ thu thập tất cả file tĩnh vào đó khi chạy collectstatic.
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Bật tính năng lưu trữ của WhiteNoise khi không ở chế độ DEBUG.
 if not DEBUG:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
