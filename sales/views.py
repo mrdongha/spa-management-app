@@ -139,11 +139,14 @@ def create_invoice_view(request):
                 services = form.cleaned_data['services']
                 packages = form.cleaned_data['packages']
                 gift_card_payment = form.cleaned_data['gift_card']
+
                 sub_total = sum(p.price for p in products)
                 sub_total += sum(s.price for s in services)
                 sub_total += sum(pkg.price for pkg in packages)
                 final_amount = sub_total
+
                 paid_amount = gift_card_payment.value if gift_card_payment else Decimal('0')
+
                 invoice = Invoice.objects.create(
                     customer=customer,
                     sub_total=sub_total,
@@ -151,11 +154,13 @@ def create_invoice_view(request):
                     paid_amount=paid_amount,
                     status='paid' if paid_amount >= final_amount else 'unpaid'
                 )
+
                 for item in list(products) + list(services) + list(packages):
                     item_type = ''
                     if isinstance(item, Product): item_type = 'product'
                     elif isinstance(item, Service): item_type = 'service'
                     elif isinstance(item, ServicePackage): item_type = 'package'
+                    
                     InvoiceDetail.objects.create(
                         invoice=invoice,
                         product=item if item_type == 'product' else None,
@@ -165,39 +170,56 @@ def create_invoice_view(request):
                         quantity=1,
                         unit_price=item.price
                     )
+                
                 if paid_amount > final_amount:
                     overpayment = paid_amount - final_amount
                     customer.credit_balance += overpayment
                     customer.save()
+
                 return redirect('invoice_detail', invoice_id=invoice.id)
     else:
         form = InvoiceForm()
+    
     context = {'page_title': 'Tạo hóa đơn mới', 'form': form}
     return render(request, 'sales/create_invoice.html', context)
     
 def record_payment_view(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
+    # Lấy số tiền cần trả trước khi xử lý
+    amount_due_before_payment = invoice.amount_due
+
     if request.method == 'POST':
         form = PaymentForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
                 payment = form.save(commit=False)
-                payment.invoice = invoice
-                payment.save()
-                amount_due_before_payment = invoice.amount_due
                 paid_this_transaction = payment.amount_paid
-                invoice.paid_amount += paid_this_transaction
+                
+                # Chỉ lưu thanh toán nếu số tiền > 0
+                if paid_this_transaction > 0:
+                    payment.invoice = invoice
+                    payment.save()
+                    # Cập nhật số tiền đã trả của hóa đơn
+                    invoice.paid_amount += paid_this_transaction
+                
+                # Xử lý tiền thừa và cộng vào tín dụng
                 if paid_this_transaction > amount_due_before_payment:
                     overpayment = paid_this_transaction - amount_due_before_payment
+                    # Lấy đối tượng customer để cập nhật
                     customer = invoice.customer
                     customer.credit_balance += overpayment
                     customer.save()
+
+                # Cập nhật trạng thái hóa đơn
                 if invoice.paid_amount >= invoice.final_amount:
                     invoice.status = 'paid'
+                
                 invoice.save()
             return redirect('invoice_detail', invoice_id=invoice.id) 
     else:
-        form = PaymentForm(initial={'amount_paid': invoice.amount_due})
+        # Gợi ý số tiền cần trả
+        form = PaymentForm(initial={'amount_paid': amount_due_before_payment})
+    
     context = {'form': form, 'invoice': invoice}
     return render(request, 'sales/record_payment.html', context)
 
@@ -210,6 +232,7 @@ def use_package_view(request, invoice_detail_id):
     invoice_detail = get_object_or_404(InvoiceDetail, id=invoice_detail_id)
     customer = invoice_detail.invoice.customer
     if request.method == 'POST':
+        # Thêm logic kiểm tra số dư gói ở đây
         PackageUsageHistory.objects.create(
             invoice_detail=invoice_detail,
             customer=customer,
