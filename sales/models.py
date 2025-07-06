@@ -9,15 +9,11 @@ class Customer(models.Model):
     full_name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=15, unique=True)
     email = models.EmailField(blank=True, null=True)
-    
     # === TRƯỜNG MỚI ĐỂ LƯU TIỀN TÍCH ĐIỂM ===
     credit_balance = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Số dư tín dụng/tiền tích điểm của khách")
-    
     created_at = models.DateTimeField(default=timezone.now)
     def __str__(self):
         return f"{self.full_name} ({self.phone_number})"
-
-# ... (Các model khác giữ nguyên không thay đổi) ...
 
 class Service(models.Model):
     name = models.CharField(max_length=255)

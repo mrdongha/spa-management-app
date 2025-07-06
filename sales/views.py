@@ -134,7 +134,8 @@ def create_invoice_view(request):
                 sub_total = sum(p.price for p in form.cleaned_data['products'])
                 sub_total += sum(s.price for s in form.cleaned_data['services'])
                 sub_total += sum(pkg.price for pkg in form.cleaned_data['packages'])
-                sub_total += sum(gc.value for gc in form.cleaned_data['gift_cards'])
+                # Thẻ trả trước không được tính vào tổng hóa đơn
+                # sub_total += sum(gc.value for gc in form.cleaned_data['gift_cards'])
                 invoice = Invoice.objects.create(customer=customer, sub_total=sub_total, final_amount=sub_total)
                 for product in form.cleaned_data['products']:
                     InvoiceDetail.objects.create(invoice=invoice, product=product, item_type='product', quantity=1, unit_price=product.price)
@@ -142,8 +143,10 @@ def create_invoice_view(request):
                     InvoiceDetail.objects.create(invoice=invoice, service=service, item_type='service', quantity=1, unit_price=service.price)
                 for package in form.cleaned_data['packages']:
                     InvoiceDetail.objects.create(invoice=invoice, service_package=package, item_type='package', quantity=1, unit_price=package.price)
-                for card in form.cleaned_data['gift_cards']:
-                    InvoiceDetail.objects.create(invoice=invoice, gift_card=card, item_type='gift_card', quantity=1, unit_price=card.value)
+                
+                # Việc mua thẻ trả trước được xử lý ở bước thanh toán, không phải lúc tạo hóa đơn
+                # for card in form.cleaned_data['gift_cards']:
+                #    InvoiceDetail.objects.create(invoice=invoice, gift_card=card, item_type='gift_card', quantity=1, unit_price=card.value)
                 return redirect('invoice_detail', invoice_id=invoice.id)
     else:
         form = InvoiceForm()
@@ -159,20 +162,27 @@ def record_payment_view(request, invoice_id):
                 payment = form.save(commit=False)
                 payment.invoice = invoice
                 payment.save()
+                
                 amount_due_before_payment = invoice.amount_due
                 paid_this_transaction = payment.amount_paid
+                
+                # Cập nhật số tiền đã trả của hóa đơn
                 invoice.paid_amount += paid_this_transaction
-                invoice.save()
+                
+                # Xử lý tiền thừa và cộng vào tín dụng
                 if paid_this_transaction > amount_due_before_payment:
                     overpayment = paid_this_transaction - amount_due_before_payment
                     customer = invoice.customer
                     customer.credit_balance += overpayment
                     customer.save()
+
+                # Cập nhật trạng thái hóa đơn
                 if invoice.paid_amount >= invoice.final_amount:
                     invoice.status = 'paid'
                 invoice.save()
             return redirect('invoice_detail', invoice_id=invoice.id) 
     else:
+        # Gợi ý số tiền cần trả
         form = PaymentForm(initial={'amount_paid': invoice.amount_due})
     context = {'form': form, 'invoice': invoice}
     return render(request, 'sales/record_payment.html', context)
@@ -217,7 +227,6 @@ def create_appointment_api(request):
             customer = Customer.objects.get(id=data.get('customer'))
             service = Service.objects.get(id=data.get('service'))
             appointment = Appointment.objects.create(customer=customer, service=service, start_time=data.get('start_time'), end_time=data.get('end_time'), notes=data.get('notes', ''), status='scheduled')
-            # === DÒNG BỊ LỖI CÚ PHÁP ĐÃ ĐƯỢC SỬA TẠI ĐÂY ===
             return JsonResponse({'status': 'success', 'message': 'Lịch hẹn đã được tạo thành công!', 'appointment_id': appointment.id})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
