@@ -1,119 +1,65 @@
 {% extends 'sales/base.html' %}
-{% block title %}Chi tiết: {{ customer.full_name }}{% endblock %}
+
+{% block title %}{{ page_title }}{% endblock %}
 
 {% block content %}
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <a href="{% url 'customer_list' %}" class="btn btn-secondary btn-sm">‹ Quay lại danh sách</a>
-    {% if perms.sales.add_appointment %}
-    <a href="{% url 'add_appointment' customer.id %}" class="btn btn-primary">➕ Đặt Lịch hẹn mới</a>
-    {% endif %}
-  </div>
-  
-  <h1>Chi tiết Khách hàng</h1>
-  <p><strong>Họ và tên:</strong> {{ customer.full_name }}</p>
-  <p><strong>Số điện thoại:</strong> {{ customer.phone_number }}</p>
-  <p><strong>Email:</strong> {{ customer.email|default:"Chưa có" }}</p>
-  <hr>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ page_title }}</h1>
+    <div>
+        <a href="#" class="btn btn-sm btn-outline-primary">Sửa thông tin</a>
+        <a href="{% url 'create_invoice' %}" class="btn btn-sm btn-success">Tạo hóa đơn mới</a>
+    </div>
+</div>
 
-  <h2>Lịch sử Hóa đơn</h2>
-  <table class="table table-hover">
-    <thead>
-      <tr>
-        <th>Mã Hóa Đơn</th>
-        <th>Ngày Tạo</th>
-        <th>Tổng Tiền</th>
-        <th>Đã Trả</th>
-        <th class="text-danger">Còn Lại</th>
-        <th>Hành động</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for invoice in invoices %}
-      <tr>
-        <td>#{{ invoice.id }}</td>
-        <td>{{ invoice.created_at|date:"H:i - d/m/Y" }}</td>
-        <td>{{ invoice.final_amount|floatformat:0 }}đ</td>
-        <td>{{ invoice.paid_amount|floatformat:0 }}đ</td>
-        <td class="text-danger fw-bold">{{ invoice.amount_due|floatformat:0 }}đ</td>
-        <td>
-          {% if invoice.status == 'unpaid' and perms.sales.add_payment %}
-            <a href="{% url 'record_payment' invoice.id %}" class="btn btn-sm btn-warning">Thanh toán</a>
-          {% else %}
-            <span class="badge text-bg-success">Hoàn thành</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="6" class="text-center">Khách hàng này chưa có hóa đơn nào.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+<div class="card mb-4">
+    <div class="card-header">
+        Thông tin cơ bản
+    </div>
+    <div class="card-body">
+        <p><strong>Mã hồ sơ:</strong> {{ customer.profile_code|default:"Chưa có" }}</p>
+        <p><strong>Số điện thoại:</strong> {{ customer.phone_number }}</p>
+        <p><strong>Email:</strong> {{ customer.email|default:"Chưa có" }}</p>
+        <p><strong>Ngày tham gia:</strong> {{ customer.created_at|date:"d/m/Y" }}</p>
+    </div>
+</div>
 
-  <hr>
-  <h2>Các Gói Dịch Vụ Đã Mua</h2>
-    <table class="table">
+<h3 class="mt-4">Lịch sử hóa đơn</h3>
+<div class="table-responsive">
+    <table class="table table-striped table-sm">
         <thead>
             <tr>
-                <th>Tên Gói</th>
-                <th>Tổng số buổi</th>
-                <th>Đã dùng</th>
-                <th>Còn lại</th>
-                <th>Hành động</th>
+                <th scope="col">ID Hóa Đơn</th>
+                <th scope="col">Ngày tạo</th>
+                <th scope="col">Tổng tiền</th>
+                <th scope="col">Trạng thái</th>
+                <th scope="col">Hành động</th>
             </tr>
         </thead>
         <tbody>
-            {% for detail in customer_invoice_details_packages %}
+            {% for invoice in customer.invoices.all %}
             <tr>
-                <td>{{ detail.service_package.name }}</td>
-                <td>{{ detail.service_package.total_sessions }}</td>
-                <td>{{ detail.times_used }}</td>
-                <td>{{ detail.sessions_left }}</td>
+                <td>#{{ invoice.id }}</td>
+                <td>{{ invoice.created_at|date:"d/m/Y H:i" }}</td>
+                <td>{{ invoice.final_amount|floatformat:0 }}đ</td>
                 <td>
-                    {% if detail.sessions_left > 0 and perms.sales.add_packageusagehistory %}
-                    <form action="{% url 'use_package' detail.id %}" method="post" class="d-inline">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-sm btn-info">Sử dụng</button>
-                    </form>
+                    {% if invoice.status == 'paid' %}
+                        <span class="badge bg-success">Đã thanh toán</span>
+                    {% elif invoice.status == 'unpaid' %}
+                        <span class="badge bg-warning text-dark">Chưa thanh toán</span>
                     {% else %}
-                    <span class="text-muted">Đã hết</span>
+                        <span class="badge bg-danger">Đã hủy</span>
                     {% endif %}
+                </td>
+                <td>
+                    <a href="#" class="btn btn-sm btn-info">Xem</a>
                 </td>
             </tr>
             {% empty %}
             <tr>
-                <td colspan="5" class="text-center">Khách hàng chưa mua gói dịch vụ nào.</td>
+                <td colspan="5" class="text-center">Khách hàng chưa có hóa đơn nào.</td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
-
-  <hr>
-  <h2>Các Lịch hẹn</h2>
-  <table class="table">
-      <thead>
-          <tr>
-              <th>Dịch vụ</th>
-              <th>Thời gian Bắt đầu</th>
-              <th>Nhân viên</th>
-              <th>Trạng thái</th>
-          </tr>
-      </thead>
-      <tbody>
-          {% for appt in customer.appointments.all %}
-          <tr>
-              <td>{{ appt.service.name }}</td>
-              <td>{{ appt.start_time|date:"H:i - d/m/Y" }}</td>
-              <td>{{ appt.staff.username|default:"N/A" }}</td>
-              <td><span class="badge text-bg-info">{{ appt.get_status_display }}</span></td>
-          </tr>
-          {% empty %}
-          <tr>
-              <td colspan="4" class="text-center">Chưa có lịch hẹn nào.</td>
-          </tr>
-          {% endfor %}
-      </tbody>
-  </table>
-
+</div>
 {% endblock %}
