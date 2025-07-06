@@ -19,8 +19,8 @@
                 <th>Mã Hồ Sơ</th>
                 <th>Họ và tên</th>
                 <th>Số điện thoại</th>
-                <th>Email</th>
-                <th class="text-end">Số dư Tín dụng</th>
+                <th class="text-end">Đã sử dụng</th>
+                <th class="text-end">Tích điểm</th>
             </tr>
         </thead>
         <tbody>
@@ -29,8 +29,8 @@
                 <td>{{ customer.profile_code|default:"N/A" }}</td>
                 <td><a href="{% url 'customer_detail' customer.id %}">{{ customer.full_name }}</a></td>
                 <td>{{ customer.phone_number }}</td>
-                <td>{{ customer.email|default:"N/A" }}</td>
-                <td class="text-end fw-bold">{{ customer.credit_balance|floatformat:0 }}đ</td>
+                <td class="text-end">{{ customer.total_spent|default:0|floatformat:0 }}đ</td>
+                <td class="text-end fw-bold text-primary">{{ customer.credit_balance|floatformat:0 }}đ</td>
             </tr>
             {% empty %}
             <tr>

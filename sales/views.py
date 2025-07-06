@@ -15,6 +15,7 @@ from decimal import Decimal
 import json
 from django.db import transaction
 from django.core.paginator import Paginator
+from django.db.models import Sum, Q # Thêm import để tính toán
 
 # ==============================================================================
 # CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
@@ -26,11 +27,20 @@ def dashboard_view(request):
 
 # --- Quản lý Khách hàng ---
 def customer_list_view(request):
-    customer_list = Customer.objects.order_by('-created_at')
+    # Thêm .annotate() để tính tổng tiền đã sử dụng cho mỗi khách hàng
+    # Chỉ tính trên các hóa đơn đã thanh toán (status='paid')
+    customer_list = Customer.objects.annotate(
+        total_spent=Sum('invoices__final_amount', filter=Q(invoices__status='paid'))
+    ).order_by('-created_at')
+    
     paginator = Paginator(customer_list, 20) 
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    context = {'page_title': 'Danh sách Khách hàng', 'customers': page_obj}
+    
+    context = {
+        'page_title': 'Danh sách Khách hàng', 
+        'customers': page_obj
+    }
     return render(request, 'sales/customer_list.html', context)
 
 def add_customer_view(request):
@@ -139,14 +149,11 @@ def create_invoice_view(request):
                 services = form.cleaned_data['services']
                 packages = form.cleaned_data['packages']
                 gift_card_payment = form.cleaned_data['gift_card']
-
                 sub_total = sum(p.price for p in products)
                 sub_total += sum(s.price for s in services)
                 sub_total += sum(pkg.price for pkg in packages)
                 final_amount = sub_total
-
                 paid_amount = gift_card_payment.value if gift_card_payment else Decimal('0')
-
                 invoice = Invoice.objects.create(
                     customer=customer_data,
                     sub_total=sub_total,
@@ -154,7 +161,6 @@ def create_invoice_view(request):
                     paid_amount=paid_amount,
                     status='paid' if paid_amount >= final_amount else 'unpaid'
                 )
-
                 for item in list(products) + list(services) + list(packages):
                     item_type = ''
                     if isinstance(item, Product): item_type = 'product'
@@ -169,14 +175,11 @@ def create_invoice_view(request):
                         quantity=1,
                         unit_price=item.price
                     )
-                
                 if paid_amount > final_amount:
                     overpayment = paid_amount - final_amount
-                    # Lấy lại đối tượng khách hàng từ DB và khóa lại để cập nhật
                     customer_to_update = Customer.objects.select_for_update().get(pk=customer_data.pk)
                     customer_to_update.credit_balance += overpayment
                     customer_to_update.save()
-
                 return redirect('invoice_detail', invoice_id=invoice.id)
     else:
         form = InvoiceForm()
@@ -190,34 +193,23 @@ def record_payment_view(request, invoice_id):
         form = PaymentForm(request.POST)
         if form.is_valid():
             paid_this_transaction = form.cleaned_data.get('amount_paid', Decimal('0'))
-            
             with transaction.atomic():
-                # Lấy số tiền còn nợ TRƯỚC khi thực hiện bất kỳ thay đổi nào
                 amount_due_before_payment = invoice.amount_due
-                
-                # Chỉ xử lý nếu có thanh toán
                 if paid_this_transaction > 0:
                     Payment.objects.create(
                         invoice=invoice,
                         amount_paid=paid_this_transaction,
                         payment_method=form.cleaned_data['payment_method']
                     )
-                    
                     invoice.paid_amount += paid_this_transaction
-                    
                     if paid_this_transaction > amount_due_before_payment:
                         overpayment = paid_this_transaction - amount_due_before_payment
-                        
-                        # Lấy lại đối tượng khách hàng từ DB và khóa lại để cập nhật
                         customer_to_update = Customer.objects.select_for_update().get(pk=invoice.customer.pk)
                         customer_to_update.credit_balance += overpayment
                         customer_to_update.save()
-
                 if invoice.paid_amount >= invoice.final_amount:
                     invoice.status = 'paid'
-                
                 invoice.save()
-            
             return redirect('invoice_detail', invoice_id=invoice.id)
     else:
         form = PaymentForm(initial={'amount_paid': invoice.amount_due})
