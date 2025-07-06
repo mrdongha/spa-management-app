@@ -1,5 +1,5 @@
 # sales/views.py
-
+from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from .models import Customer, Appointment, Invoice, Service, Voucher, Product, Payment, InvoiceDetail, PackageUsageHistory, ServicePackage
@@ -119,13 +119,9 @@ def add_appointment_view(request):
     return render(request, 'sales/add_appointment.html', context)
     
 def create_invoice_view(request):
-    if request.method == 'POST':
-        # Logic xử lý lưu hóa đơn sẽ phức tạp và cần làm ở bước sau
-        # Hiện tại, chúng ta chỉ cần hiển thị form cho đúng
-        form = InvoiceForm(request.POST)
-        if form.is_valid():
-            # Xử lý tạo hóa đơn ở đây
-            pass
+    # Hàm này chỉ dùng để kiểm tra
+    # Nó sẽ bỏ qua tất cả form và template, chỉ trả về một dòng chữ.
+    return HttpResponse("<h1>KIỂM TRA: NẾU BẠN THẤY DÒNG NÀY, VIEW ĐÃ CHẠY ĐÚNG.</h1>")
     else:
         form = InvoiceForm()
 
