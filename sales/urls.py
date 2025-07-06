@@ -7,7 +7,10 @@ urlpatterns = [
     # Trang chính
     path('', views.dashboard_view, name='dashboard'),
     path('calendar/', views.calendar_view, name='calendar'),
+    
+    # Báo cáo
     path('reports/', views.report_view, name='reports'),
+    path('reports/staff/', views.staff_report_view, name='staff_report'),
 
     # Quản lý khách hàng
     path('customers/', views.customer_list_view, name='customer_list'),
@@ -26,7 +29,7 @@ urlpatterns = [
 
     # Quản lý hóa đơn và thanh toán
     path('invoices/create/', views.create_invoice_view, name='create_invoice'),
-    path('invoices/<int:invoice_id>/', views.invoice_detail_view, name='invoice_detail'), # BỔ SUNG DÒNG NÀY
+    path('invoices/<int:invoice_id>/', views.invoice_detail_view, name='invoice_detail'),
     path('invoices/<int:invoice_id>/pay/', views.record_payment_view, name='record_payment'),
     
     # Quản lý gói dịch vụ

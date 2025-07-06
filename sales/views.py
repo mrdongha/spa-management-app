@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse, HttpResponse
 from .models import (
     Customer, Appointment, Invoice, Service, Voucher, Product, 
-    Payment, InvoiceDetail, PackageUsageHistory, ServicePackage, GiftCard
+    Payment, InvoiceDetail, PackageUsageHistory, ServicePackage, GiftCard, User
 )
 from .forms import (
     CustomerForm, AppointmentForm, ModalAppointmentForm, PaymentForm, 
@@ -18,7 +18,6 @@ from django.core.paginator import Paginator
 from django.db.models import Sum, Q
 from django.db.models.functions import TruncDate, TruncMonth
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
 
 # ==============================================================================
 # CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
@@ -165,6 +164,18 @@ def report_view(request):
     }
     return render(request, 'sales/reports.html', context)
     
+@login_required
+def staff_report_view(request):
+    staff_revenue = User.objects.annotate(
+        total_revenue=Sum('invoices_created__final_amount', filter=Q(invoices_created__status='paid'))
+    ).filter(total_revenue__gt=0).order_by('-total_revenue')
+    
+    context = {
+        'page_title': 'Báo cáo doanh thu theo nhân viên',
+        'staff_revenue': staff_revenue
+    }
+    return render(request, 'sales/staff_report.html', context)
+
 @login_required
 def add_appointment_view(request):
     if request.method == 'POST':
