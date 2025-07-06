@@ -1,10 +1,11 @@
 {% extends 'sales/base.html' %}
+{% load humanize %}
 
 {% block title %}Báo cáo & Thống kê{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">{{ page_title }}</h1>
+    <h1 class="h2">Báo cáo & Thống kê</h1>
 </div>
 
 <div class="row">
@@ -12,7 +13,7 @@
         <div class="card text-center">
             <div class="card-body">
                 <h5 class="card-title">Tổng Doanh Thu</h5>
-                <p class="card-text fs-3 fw-bold text-success">{{ total_revenue|floatformat:0 }}đ</p>
+                <p class="card-text fs-3 fw-bold text-success">{{ total_revenue|floatformat:0|intcomma }}đ</p>
             </div>
         </div>
     </div>
@@ -41,7 +42,7 @@
                     {% for daily_data in daily_revenue %}
                     <tr>
                         <td>{{ daily_data.day|date:"d/m/Y" }}</td>
-                        <td class="text-end">{{ daily_data.daily_total|floatformat:0 }}đ</td>
+                        <td class="text-end">{{ daily_data.daily_total|floatformat:0|intcomma }}đ</td>
                     </tr>
                     {% empty %}
                     <tr>
@@ -66,7 +67,7 @@
                     {% for monthly_data in monthly_revenue %}
                     <tr>
                         <td>{{ monthly_data.month|date:"m/Y" }}</td>
-                        <td class="text-end">{{ monthly_data.monthly_total|floatformat:0 }}đ</td>
+                        <td class="text-end">{{ monthly_data.monthly_total|floatformat:0|intcomma }}đ</td>
                     </tr>
                     {% empty %}
                     <tr>
