@@ -51,7 +51,12 @@
                     {% endif %}
                 </td>
                 <td>
-                    <a href="#" class="btn btn-sm btn-info">Xem</a>
+                    {# === ĐOẠN CODE ĐÃ ĐƯỢC CẬP NHẬT TẠI ĐÂY === #}
+                    {% if invoice.status == 'unpaid' %}
+                        <a href="{% url 'record_payment' invoice.id %}" class="btn btn-sm btn-success">Thanh toán</a>
+                    {% else %}
+                        <a href="#" class="btn btn-sm btn-info disabled">Xem</a>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
