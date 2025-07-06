@@ -111,4 +111,168 @@ def calendar_view(request):
 def report_view(request):
     paid_invoices = Invoice.objects.filter(status='paid').order_by('-created_at')
     total_revenue = sum(invoice.final_amount for invoice in paid_invoices)
-    context = {'invoices': paid_invoices, 'total_revenue': total_revenue, 'invoice_
+    context = {'invoices': paid_invoices, 'total_revenue': total_revenue, 'invoice_count': paid_invoices.count()}
+    return render(request, 'sales/reports.html', context)
+    
+def add_appointment_view(request):
+    if request.method == 'POST':
+        form = AppointmentForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('dashboard_view')
+    else:
+        form = AppointmentForm()
+    context = {'form': form}
+    return render(request, 'sales/add_appointment.html', context)
+    
+def create_invoice_view(request):
+    if request.method == 'POST':
+        form = InvoiceForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                customer = form.cleaned_data['customer']
+                products = form.cleaned_data['products']
+                services = form.cleaned_data['services']
+                packages = form.cleaned_data['packages']
+                gift_card_payment = form.cleaned_data['gift_card']
+
+                sub_total = sum(p.price for p in products)
+                sub_total += sum(s.price for s in services)
+                sub_total += sum(pkg.price for pkg in packages)
+                final_amount = sub_total
+
+                paid_amount = gift_card_payment.value if gift_card_payment else Decimal('0')
+
+                invoice = Invoice.objects.create(
+                    customer=customer,
+                    sub_total=sub_total,
+                    final_amount=final_amount,
+                    paid_amount=paid_amount,
+                    status='paid' if paid_amount >= final_amount else 'unpaid'
+                )
+
+                for item in list(products) + list(services) + list(packages):
+                    item_type = ''
+                    if isinstance(item, Product): item_type = 'product'
+                    elif isinstance(item, Service): item_type = 'service'
+                    elif isinstance(item, ServicePackage): item_type = 'package'
+                    
+                    InvoiceDetail.objects.create(
+                        invoice=invoice,
+                        product=item if item_type == 'product' else None,
+                        service=item if item_type == 'service' else None,
+                        service_package=item if item_type == 'package' else None,
+                        item_type=item_type,
+                        quantity=1,
+                        unit_price=item.price
+                    )
+                
+                if paid_amount > final_amount:
+                    overpayment = paid_amount - final_amount
+                    customer.credit_balance += overpayment
+                    customer.save()
+
+                return redirect('invoice_detail', invoice_id=invoice.id)
+    else:
+        form = InvoiceForm()
+    
+    context = {'page_title': 'Tạo hóa đơn mới', 'form': form}
+    return render(request, 'sales/create_invoice.html', context)
+    
+def record_payment_view(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    if request.method == 'POST':
+        form = PaymentForm(request.POST)
+        if form.is_valid():
+            with transaction.atomic():
+                payment = form.save(commit=False)
+                payment.invoice = invoice
+                payment.save()
+                amount_due_before_payment = invoice.amount_due
+                paid_this_transaction = payment.amount_paid
+                invoice.paid_amount += paid_this_transaction
+                
+                if paid_this_transaction > amount_due_before_payment:
+                    overpayment = paid_this_transaction - amount_due_before_payment
+                    customer = invoice.customer
+                    customer.credit_balance += overpayment
+                    customer.save()
+                
+                if invoice.paid_amount >= invoice.final_amount:
+                    invoice.status = 'paid'
+                invoice.save()
+            return redirect('invoice_detail', invoice_id=invoice.id) 
+    else:
+        form = PaymentForm(initial={'amount_paid': invoice.amount_due})
+    context = {'form': form, 'invoice': invoice}
+    return render(request, 'sales/record_payment.html', context)
+
+def invoice_detail_view(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    context = {'page_title': f'Chi tiết hóa đơn #{invoice.id}', 'invoice': invoice}
+    return render(request, 'sales/invoice_detail.html', context)
+    
+def use_package_view(request, invoice_detail_id):
+    invoice_detail = get_object_or_404(InvoiceDetail, id=invoice_detail_id)
+    customer = invoice_detail.invoice.customer
+    if request.method == 'POST':
+        PackageUsageHistory.objects.create(
+            invoice_detail=invoice_detail,
+            customer=customer,
+            notes=request.POST.get('notes', '')
+        )
+        return redirect('customer_detail', customer_id=customer.id)
+    return redirect('customer_detail', customer_id=customer.id)
+
+# ==============================================================================
+# CÁC HÀM VIEW CHO API
+# ==============================================================================
+
+def all_appointments_json(request):
+    appointments = Appointment.objects.all().select_related('customer', 'service')
+    data = []
+    for appointment in appointments:
+        service_name = appointment.service.name if appointment.service else "Dịch vụ đã xóa"
+        data.append({'title': f"{appointment.customer.full_name} - {service_name}", 'start': appointment.start_time.isoformat(), 'end': appointment.end_time.isoformat(), 'id': appointment.id})
+    return JsonResponse(data, safe=False)
+
+def appointment_form_content(request):
+    form = ModalAppointmentForm()
+    return render(request, 'sales/partials/appointment_form_modal.html', {'form': form})
+    
+def create_appointment_api(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            customer = Customer.objects.get(id=data.get('customer'))
+            service = Service.objects.get(id=data.get('service'))
+            appointment = Appointment.objects.create(customer=customer, service=service, start_time=data.get('start_time'), end_time=data.get('end_time'), notes=data.get('notes', ''), status='scheduled')
+            return JsonResponse({'status': 'success', 'message': 'Lịch hẹn đã được tạo thành công!', 'appointment_id': appointment.id})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+    
+def apply_voucher_api(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            voucher_code = data.get('voucher_code')
+            sub_total = Decimal(data.get('sub_total', '0'))
+            if not voucher_code:
+                return JsonResponse({'status': 'error', 'message': 'Vui lòng nhập mã voucher.'}, status=400)
+            now = timezone.now()
+            voucher = Voucher.objects.get(code__iexact=voucher_code, is_active=True, valid_from__lte=now)
+            if voucher.valid_to and voucher.valid_to < now:
+                raise Voucher.DoesNotExist
+            discount_amount = Decimal('0')
+            if voucher.discount_type == 'percentage':
+                discount_amount = (sub_total * voucher.value) / 100
+            elif voucher.discount_type == 'fixed':
+                discount_amount = voucher.value
+            final_amount = sub_total - discount_amount
+            return JsonResponse({'status': 'success', 'message': 'Áp dụng voucher thành công!', 'discount_amount': str(discount_amount), 'final_amount': str(final_amount)})
+        except Voucher.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Mã voucher không hợp lệ hoặc đã hết hạn.'}, status=404)
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': 'Có lỗi xảy ra: ' + str(e)}, status=400)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
