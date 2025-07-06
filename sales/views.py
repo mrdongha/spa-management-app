@@ -15,7 +15,7 @@ from decimal import Decimal
 import json
 from django.db import transaction
 from django.core.paginator import Paginator
-from django.db.models import Sum, Q # Thêm import để tính toán
+from django.db.models import Sum, Q
 
 # ==============================================================================
 # CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
@@ -27,8 +27,6 @@ def dashboard_view(request):
 
 # --- Quản lý Khách hàng ---
 def customer_list_view(request):
-    # Thêm .annotate() để tính tổng tiền đã sử dụng cho mỗi khách hàng
-    # Chỉ tính trên các hóa đơn đã thanh toán (status='paid')
     customer_list = Customer.objects.annotate(
         total_spent=Sum('invoices__final_amount', filter=Q(invoices__status='paid'))
     ).order_by('-created_at')
@@ -189,32 +187,61 @@ def create_invoice_view(request):
     
 def record_payment_view(request, invoice_id):
     invoice = get_object_or_404(Invoice, id=invoice_id)
+    customer = invoice.customer
+
     if request.method == 'POST':
         form = PaymentForm(request.POST)
         if form.is_valid():
-            paid_this_transaction = form.cleaned_data.get('amount_paid', Decimal('0'))
+            credit_to_use = form.cleaned_data.get('use_credit') or Decimal('0')
+            other_payment_amount = form.cleaned_data.get('amount_paid') or Decimal('0')
+            other_payment_method = form.cleaned_data.get('payment_method')
+
             with transaction.atomic():
-                amount_due_before_payment = invoice.amount_due
-                if paid_this_transaction > 0:
+                # Lấy lại đối tượng khách hàng và khóa để cập nhật, đảm bảo dữ liệu mới nhất
+                customer_to_update = Customer.objects.select_for_update().get(pk=customer.pk)
+
+                # 1. Xử lý thanh toán bằng tín dụng
+                if credit_to_use > 0:
+                    # Đảm bảo khách hàng không sử dụng nhiều hơn số tín dụng họ có
+                    actual_credit_paid = min(credit_to_use, customer_to_update.credit_balance)
+                    if actual_credit_paid > 0:
+                        customer_to_update.credit_balance -= actual_credit_paid
+                        invoice.paid_amount += actual_credit_paid
+                        Payment.objects.create(
+                            invoice=invoice,
+                            amount_paid=actual_credit_paid,
+                            payment_method='credit'
+                        )
+
+                # 2. Xử lý thanh toán bằng các phương thức khác (Tiền mặt, thẻ...)
+                if other_payment_amount > 0:
+                    invoice.paid_amount += other_payment_amount
                     Payment.objects.create(
                         invoice=invoice,
-                        amount_paid=paid_this_transaction,
-                        payment_method=form.cleaned_data['payment_method']
+                        amount_paid=other_payment_amount,
+                        payment_method=other_payment_method
                     )
-                    invoice.paid_amount += paid_this_transaction
-                    if paid_this_transaction > amount_due_before_payment:
-                        overpayment = paid_this_transaction - amount_due_before_payment
-                        customer_to_update = Customer.objects.select_for_update().get(pk=invoice.customer.pk)
-                        customer_to_update.credit_balance += overpayment
-                        customer_to_update.save()
+
+                # 3. Xử lý tiền thừa (nếu có) và cộng vào tín dụng
+                if invoice.paid_amount > invoice.final_amount:
+                    # Tính toán số tiền thừa dựa trên tổng số tiền đã trả so với tổng hóa đơn
+                    overpayment = invoice.paid_amount - invoice.final_amount
+                    customer_to_update.credit_balance += overpayment
+                    # Điều chỉnh lại paid_amount của hóa đơn cho khớp với final_amount
+                    invoice.paid_amount = invoice.final_amount
+                
+                # 4. Cập nhật trạng thái hóa đơn và lưu lại khách hàng
                 if invoice.paid_amount >= invoice.final_amount:
                     invoice.status = 'paid'
+                
+                customer_to_update.save()
                 invoice.save()
+            
             return redirect('invoice_detail', invoice_id=invoice.id)
     else:
-        form = PaymentForm(initial={'amount_paid': invoice.amount_due})
+        form = PaymentForm(initial={'amount_paid': 0, 'use_credit': 0})
     
-    context = {'form': form, 'invoice': invoice}
+    context = {'form': form, 'invoice': invoice, 'customer': customer}
     return render(request, 'sales/record_payment.html', context)
 
 def invoice_detail_view(request, invoice_id):

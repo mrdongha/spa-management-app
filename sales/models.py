@@ -102,7 +102,13 @@ class PackageUsageHistory(models.Model):
         return f"Khách {self.customer.full_name} dùng gói #{self.invoice_detail.id} lúc {self.used_at}"
 
 class Payment(models.Model):
-    PAYMENT_CHOICES = [('cash', 'Tiền mặt'), ('card', 'Thẻ'), ('transfer', 'Chuyển khoản'),]
+    # === THÊM LỰA CHỌN THANH TOÁN BẰNG TÍN DỤNG ===
+    PAYMENT_CHOICES = [
+        ('cash', 'Tiền mặt'), 
+        ('card', 'Thẻ'), 
+        ('transfer', 'Chuyển khoản'),
+        ('credit', 'Tín dụng tích điểm')
+    ]
     invoice = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name='payments')
     amount_paid = models.DecimalField(max_digits=12, decimal_places=2)
     payment_method = models.CharField(max_length=50, choices=PAYMENT_CHOICES)
@@ -110,7 +116,6 @@ class Payment(models.Model):
     def __str__(self):
         return f"Thanh toán {self.amount_paid} cho hóa đơn #{self.invoice.id}"
 
-# === MODEL APPOINTMENT ĐÃ ĐƯỢC SỬA LẠI CHO ĐÚNG ===
 class Appointment(models.Model):
     STATUS_CHOICES = [('scheduled', 'Đã lên lịch'), ('completed', 'Đã hoàn thành'), ('cancelled', 'Đã hủy'),]
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='appointments')

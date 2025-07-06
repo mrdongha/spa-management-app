@@ -9,27 +9,44 @@
 
 <div class="row">
     <div class="col-md-6">
-        <h4>Thông tin hóa đơn</h4>
-        <p><strong>Khách hàng:</strong> {{ invoice.customer.full_name }}</p>
-        <p><strong>Tổng tiền:</strong> {{ invoice.final_amount|floatformat:0 }}đ</p>
-        <p><strong>Đã trả:</strong> {{ invoice.paid_amount|floatformat:0 }}đ</p>
-        <p class="fw-bold fs-5 text-danger">Còn lại: {{ invoice.amount_due|floatformat:0 }}đ</p>
+        <div class="card">
+            <div class="card-header">Thông tin hóa đơn</div>
+            <div class="card-body">
+                <p><strong>Khách hàng:</strong> {{ invoice.customer.full_name }}</p>
+                <p><strong>Tổng tiền:</strong> {{ invoice.final_amount|floatformat:0 }}đ</p>
+                <p><strong>Đã trả:</strong> {{ invoice.paid_amount|floatformat:0 }}đ</p>
+                <p class="fw-bold fs-5 text-danger">Còn lại: {{ invoice.amount_due|floatformat:0 }}đ</p>
+            </div>
+        </div>
+        <div class="card mt-3">
+            <div class="card-header">Thông tin tín dụng</div>
+            <div class="card-body">
+                <p><strong>Số dư tín dụng hiện có:</strong> <span class="fw-bold text-primary">{{ customer.credit_balance|floatformat:0 }}đ</span></p>
+            </div>
+        </div>
     </div>
     <div class="col-md-6">
         <h4>Nhập thông tin thanh toán</h4>
-        <form method="post">
+        <form method="post" id="payment-form">
             {% csrf_token %}
             <div class="mb-3">
-                <label for="{{ form.amount_paid.id_for_label }}" class="form-label fw-bold">Số tiền thanh toán</label>
+                <label for="{{ form.use_credit.id_for_label }}" class="form-label">{{ form.use_credit.label }}</label>
+                {{ form.use_credit }}
+                <div class="form-text">Nhập số tiền muốn trừ từ tài khoản tích điểm.</div>
+            </div>
+             <div class="mb-3">
+                <label for="{{ form.amount_paid.id_for_label }}" class="form-label">{{ form.amount_paid.label }}</label>
                 {{ form.amount_paid }}
             </div>
             <div class="mb-3">
-                <label for="{{ form.payment_method.id_for_label }}" class="form-label fw-bold">Phương thức thanh toán</label>
+                <label for="{{ form.payment_method.id_for_label }}" class="form-label">{{ form.payment_method.label }}</label>
                 {{ form.payment_method }}
             </div>
+
             <button type="submit" class="btn btn-success">Xác nhận thanh toán</button>
             <a href="{% url 'customer_detail' invoice.customer.id %}" class="btn btn-secondary">Quay lại</a>
         </form>
     </div>
 </div>
+
 {% endblock %}
