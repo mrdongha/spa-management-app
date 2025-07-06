@@ -16,6 +16,7 @@ import json
 from django.db import transaction
 from django.core.paginator import Paginator
 from django.db.models import Sum, Q
+from django.db.models.functions import TruncDate, TruncMonth
 
 # ==============================================================================
 # CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
@@ -126,9 +127,31 @@ def calendar_view(request):
     return render(request, 'sales/calendar.html', context)
 
 def report_view(request):
-    paid_invoices = Invoice.objects.filter(status='paid').order_by('-created_at')
-    total_revenue = sum(invoice.final_amount for invoice in paid_invoices)
-    context = {'invoices': paid_invoices, 'total_revenue': total_revenue, 'invoice_count': paid_invoices.count()}
+    paid_invoices = Invoice.objects.filter(status='paid')
+    
+    # Tính toán tổng quan
+    total_revenue = paid_invoices.aggregate(total=Sum('final_amount'))['total'] or 0
+    invoice_count = paid_invoices.count()
+
+    # Thống kê doanh thu theo ngày
+    daily_revenue = paid_invoices.annotate(day=TruncDate('created_at')) \
+                                 .values('day') \
+                                 .annotate(daily_total=Sum('final_amount')) \
+                                 .order_by('-day')
+
+    # Thống kê doanh thu theo tháng
+    monthly_revenue = paid_invoices.annotate(month=TruncMonth('created_at')) \
+                                   .values('month') \
+                                   .annotate(monthly_total=Sum('final_amount')) \
+                                   .order_by('-month')
+
+    context = {
+        'page_title': 'Báo cáo & Thống kê',
+        'total_revenue': total_revenue,
+        'invoice_count': invoice_count,
+        'daily_revenue': daily_revenue,
+        'monthly_revenue': monthly_revenue,
+    }
     return render(request, 'sales/reports.html', context)
     
 def add_appointment_view(request):
@@ -147,57 +170,48 @@ def create_invoice_view(request):
         form = InvoiceForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
-                # Lấy dữ liệu
                 customer_data = form.cleaned_data['customer']
+                customer_to_update = Customer.objects.select_for_update().get(pk=customer_data.pk)
                 products = form.cleaned_data['products']
                 services = form.cleaned_data['services']
                 packages = form.cleaned_data['packages']
+                gift_card_payment = form.cleaned_data['gift_card']
+                final_amount = sum(p.price for p in products) + sum(s.price for s in services) + sum(pkg.price for pkg in packages)
                 
-                # Lấy đối tượng khách hàng đầy đủ từ DB để cập nhật
-                customer_to_update = Customer.objects.select_for_update().get(pk=customer_data.pk)
-
-                # Tính tổng tiền dịch vụ/sản phẩm
-                final_amount = sum(p.price for p in products)
-                final_amount += sum(s.price for s in services)
-                final_amount += sum(pkg.price for pkg in packages)
-                
-                # Logic mới: Tự động dùng tín dụng để thanh toán
+                # Logic mới: Tự động dùng tín dụng
                 amount_paid_from_credit = min(customer_to_update.credit_balance, final_amount)
+                
+                # Logic mua thẻ trả trước
+                payment_for_gift_card = gift_card_payment.value if gift_card_payment else Decimal('0')
 
-                # Tạo hóa đơn với số tiền đã trả bằng tín dụng
+                paid_amount = amount_paid_from_credit + payment_for_gift_card
+
                 invoice = Invoice.objects.create(
                     customer=customer_to_update,
                     sub_total=final_amount,
                     final_amount=final_amount,
-                    paid_amount=amount_paid_from_credit,
-                    status='paid' if amount_paid_from_credit >= final_amount else 'unpaid'
+                    paid_amount=paid_amount,
+                    status='paid' if paid_amount >= final_amount else 'unpaid'
                 )
 
-                # Thêm chi tiết hóa đơn
                 for item in list(products) + list(services) + list(packages):
-                    # ... (logic thêm chi tiết giữ nguyên)
                     item_type = ''
                     if isinstance(item, Product): item_type = 'product'
                     elif isinstance(item, Service): item_type = 'service'
                     elif isinstance(item, ServicePackage): item_type = 'package'
                     InvoiceDetail.objects.create(invoice=invoice, product=item if item_type == 'product' else None, service=item if item_type == 'service' else None, service_package=item if item_type == 'package' else None, item_type=item_type, quantity=1, unit_price=item.price)
 
-                # Trừ tiền tín dụng của khách và lưu lại
                 if amount_paid_from_credit > 0:
                     customer_to_update.credit_balance -= amount_paid_from_credit
-                    customer_to_update.save()
-                    # Ghi nhận một thanh toán bằng tín dụng
                     Payment.objects.create(invoice=invoice, amount_paid=amount_paid_from_credit, payment_method='credit')
-                
-                # Xử lý nếu khách mua thêm thẻ mới trong cùng lúc (quy trình cũ)
-                gift_card_payment = form.cleaned_data['gift_card']
-                if gift_card_payment:
-                    # Ghi nhận thanh toán cho việc mua thẻ
-                    Payment.objects.create(invoice=invoice, amount_paid=gift_card_payment.value, payment_method='card') # Giả sử mua bằng thẻ
-                    # Cộng tiền mua thẻ vào tín dụng
-                    customer_to_update.credit_balance += gift_card_payment.value
-                    customer_to_update.save()
 
+                if gift_card_payment:
+                    overpayment = payment_for_gift_card
+                    if paid_amount > final_amount:
+                        overpayment = payment_for_gift_card - (final_amount - amount_paid_from_credit)
+                    customer_to_update.credit_balance += overpayment
+                
+                customer_to_update.save()
                 return redirect('invoice_detail', invoice_id=invoice.id)
     else:
         form = InvoiceForm()
@@ -218,9 +232,10 @@ def record_payment_view(request, invoice_id):
 
             with transaction.atomic():
                 customer_to_update = Customer.objects.select_for_update().get(pk=customer.pk)
+                amount_due = invoice.amount_due
                 
                 # 1. Thanh toán bằng tín dụng
-                actual_credit_paid = min(credit_to_use, customer_to_update.credit_balance, invoice.amount_due)
+                actual_credit_paid = min(credit_to_use, customer_to_update.credit_balance, amount_due)
                 if actual_credit_paid > 0:
                     customer_to_update.credit_balance -= actual_credit_paid
                     invoice.paid_amount += actual_credit_paid

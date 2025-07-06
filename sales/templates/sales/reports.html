@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">Báo cáo & Thống kê</h1>
+    <h1 class="h2">{{ page_title }}</h1>
 </div>
 
 <div class="row">
@@ -26,31 +26,56 @@
     </div>
 </div>
 
-<h2 class="mt-4">Chi tiết các hóa đơn đã thanh toán</h2>
-<div class="table-responsive">
-    <table class="table table-striped table-sm">
-        <thead>
-            <tr>
-                <th scope="col">ID Hóa Đơn</th>
-                <th scope="col">Khách Hàng</th>
-                <th scope="col">Ngày Tạo</th>
-                <th scope="col">Tổng Tiền</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for invoice in invoices %}
-            <tr>
-                <td>#{{ invoice.id }}</td>
-                <td>{{ invoice.customer.full_name }}</td>
-                <td>{{ invoice.created_at|date:"d/m/Y H:i" }}</td>
-                <td>{{ invoice.final_amount|floatformat:0 }}đ</td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="4" class="text-center">Chưa có hóa đơn nào được thanh toán.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="row mt-4">
+    <div class="col-md-6">
+        <h4>Doanh thu theo ngày</h4>
+        <div class="table-responsive">
+            <table class="table table-striped table-sm">
+                <thead>
+                    <tr>
+                        <th>Ngày</th>
+                        <th class="text-end">Tổng thu</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for daily_data in daily_revenue %}
+                    <tr>
+                        <td>{{ daily_data.day|date:"d/m/Y" }}</td>
+                        <td class="text-end">{{ daily_data.daily_total|floatformat:0 }}đ</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center">Chưa có dữ liệu.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <h4>Doanh thu theo tháng</h4>
+        <div class="table-responsive">
+            <table class="table table-striped table-sm">
+                <thead>
+                    <tr>
+                        <th>Tháng</th>
+                        <th class="text-end">Tổng thu</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for monthly_data in monthly_revenue %}
+                    <tr>
+                        <td>{{ monthly_data.month|date:"m/Y" }}</td>
+                        <td class="text-end">{{ monthly_data.monthly_total|floatformat:0 }}đ</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center">Chưa có dữ liệu.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 {% endblock %}
