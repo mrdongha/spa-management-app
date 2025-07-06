@@ -24,9 +24,7 @@
 
 <div id="invoice-content">
     <div class="card">
-        <div class="card-header fw-bold">
-            Thông tin chung
-        </div>
+        <div class="card-header fw-bold">Thông tin chung</div>
         <ul class="list-group list-group-flush">
             <li class="list-group-item"><strong>Khách hàng:</strong> {{ invoice.customer.full_name }}</li>
             <li class="list-group-item"><strong>Nhân viên tư vấn:</strong> {{ invoice.staff.username|default:"Không có" }}</li>
@@ -42,17 +40,10 @@
     </div>
     
     <div class="card mt-4">
-        <div class="card-header fw-bold">
-            Chi tiết mục
-        </div>
+        <div class="card-header fw-bold">Chi tiết mục</div>
         <div class="table-responsive">
             <table class="table mb-0">
-                <thead>
-                    <tr>
-                        <th>Sản phẩm/Dịch vụ</th>
-                        <th class="text-end">Đơn giá</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Sản phẩm/Dịch vụ</th><th class="text-end">Đơn giá</th></tr></thead>
                 <tbody>
                     {% for detail in invoice.details.all %}
                     <tr>
@@ -76,11 +67,8 @@
             <div class="d-flex justify-content-end fs-5 fw-bold text-danger">
                 <strong class="me-3">Cần thanh toán thêm:</strong> 
                 <span>
-                    {% if invoice.amount_due > 0 %}
-                        {{ invoice.amount_due|floatformat:0|intcomma }}đ
-                    {% else %}
-                        0đ
-                    {% endif %}
+                    {% if invoice.amount_due > 0 %}{{ invoice.amount_due|floatformat:0|intcomma }}đ
+                    {% else %}0đ{% endif %}
                 </span>
             </div>
         </div>
