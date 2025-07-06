@@ -26,6 +26,7 @@ urlpatterns = [
 
     # Quản lý hóa đơn và thanh toán
     path('invoices/create/', views.create_invoice_view, name='create_invoice'),
+    path('invoices/<int:invoice_id>/', views.invoice_detail_view, name='invoice_detail'),
     path('invoices/<int:invoice_id>/pay/', views.record_payment_view, name='record_payment'),
     
     # Quản lý gói dịch vụ

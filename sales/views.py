@@ -131,21 +131,11 @@ def create_invoice_view(request):
         if form.is_valid():
             with transaction.atomic():
                 customer = form.cleaned_data['customer']
-                
-                # Tính tổng tiền từ các mục đã chọn
                 sub_total = sum(p.price for p in form.cleaned_data['products'])
                 sub_total += sum(s.price for s in form.cleaned_data['services'])
                 sub_total += sum(pkg.price for pkg in form.cleaned_data['packages'])
                 sub_total += sum(gc.value for gc in form.cleaned_data['gift_cards'])
-
-                # Tạo hóa đơn chính
-                invoice = Invoice.objects.create(
-                    customer=customer,
-                    sub_total=sub_total,
-                    final_amount=sub_total # Tạm thời chưa xử lý voucher
-                )
-
-                # Thêm các chi tiết hóa đơn
+                invoice = Invoice.objects.create(customer=customer, sub_total=sub_total, final_amount=sub_total)
                 for product in form.cleaned_data['products']:
                     InvoiceDetail.objects.create(invoice=invoice, product=product, item_type='product', quantity=1, unit_price=product.price)
                 for service in form.cleaned_data['services']:
@@ -154,16 +144,10 @@ def create_invoice_view(request):
                     InvoiceDetail.objects.create(invoice=invoice, service_package=package, item_type='package', quantity=1, unit_price=package.price)
                 for card in form.cleaned_data['gift_cards']:
                     InvoiceDetail.objects.create(invoice=invoice, gift_card=card, item_type='gift_card', quantity=1, unit_price=card.value)
-
-                # Chuyển hướng đến trang chi tiết hóa đơn (giả sử có)
-                return redirect('dashboard') # Hoặc trang chi tiết hóa đơn
+                return redirect('invoice_detail', invoice_id=invoice.id)
     else:
         form = InvoiceForm()
-
-    context = {
-        'page_title': 'Tạo hóa đơn mới',
-        'form': form,
-    }
+    context = {'page_title': 'Tạo hóa đơn mới', 'form': form}
     return render(request, 'sales/create_invoice.html', context)
     
 def record_payment_view(request, invoice_id):
@@ -178,13 +162,19 @@ def record_payment_view(request, invoice_id):
             if invoice.paid_amount >= invoice.final_amount:
                 invoice.status = 'paid'
             invoice.save()
-            # Giả sử có URL name là 'invoice_detail'
-            # return redirect('invoice_detail', invoice_id=invoice.id) 
-            return redirect('dashboard')
+            return redirect('invoice_detail', invoice_id=invoice.id) 
     else:
         form = PaymentForm()
     context = {'form': form, 'invoice': invoice}
     return render(request, 'sales/record_payment.html', context)
+
+def invoice_detail_view(request, invoice_id):
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    context = {
+        'page_title': f'Chi tiết hóa đơn #{invoice.id}',
+        'invoice': invoice
+    }
+    return render(request, 'sales/invoice_detail.html', context)
     
 def use_package_view(request, invoice_detail_id):
     invoice_detail = get_object_or_404(InvoiceDetail, id=invoice_detail_id)
@@ -207,12 +197,7 @@ def all_appointments_json(request):
     data = []
     for appointment in appointments:
         service_name = appointment.service.name if appointment.service else "Dịch vụ đã xóa"
-        data.append({
-            'title': f"{appointment.customer.full_name} - {service_name}",
-            'start': appointment.start_time.isoformat(),
-            'end': appointment.end_time.isoformat(),
-            'id': appointment.id,
-        })
+        data.append({'title': f"{appointment.customer.full_name} - {service_name}", 'start': appointment.start_time.isoformat(), 'end': appointment.end_time.isoformat(), 'id': appointment.id})
     return JsonResponse(data, safe=False)
 
 def appointment_form_content(request):
@@ -225,14 +210,7 @@ def create_appointment_api(request):
             data = json.loads(request.body)
             customer = Customer.objects.get(id=data.get('customer'))
             service = Service.objects.get(id=data.get('service'))
-            appointment = Appointment.objects.create(
-                customer=customer,
-                service=service,
-                start_time=data.get('start_time'),
-                end_time=data.get('end_time'),
-                notes=data.get('notes', ''),
-                status='scheduled'
-            )
+            appointment = Appointment.objects.create(customer=customer, service=service, start_time=data.get('start_time'), end_time=data.get('end_time'), notes=data.get('notes', ''), status='scheduled')
             return JsonResponse({'status': 'success', 'message': 'Lịch hẹn đã được tạo thành công!', 'appointment_id': appointment.id})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
@@ -256,12 +234,7 @@ def apply_voucher_api(request):
             elif voucher.discount_type == 'fixed':
                 discount_amount = voucher.value
             final_amount = sub_total - discount_amount
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Áp dụng voucher thành công!',
-                'discount_amount': str(discount_amount),
-                'final_amount': str(final_amount),
-            })
+            return JsonResponse({'status': 'success', 'message': 'Áp dụng voucher thành công!', 'discount_amount': str(discount_amount), 'final_amount': str(final_amount)})
         except Voucher.DoesNotExist:
             return JsonResponse({'status': 'error', 'message': 'Mã voucher không hợp lệ hoặc đã hết hạn.'}, status=404)
         except Exception as e:

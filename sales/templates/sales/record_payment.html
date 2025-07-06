@@ -1,52 +1,35 @@
 {% extends 'sales/base.html' %}
-{% load humanize %}
 
-{% block title %}Thanh toán cho Hóa đơn #{{ invoice.id }}{% endblock %}
+{% block title %}Ghi nhận thanh toán{% endblock %}
 
 {% block content %}
-  <h1>Thanh toán cho Hóa đơn #{{ invoice.id }}</h1>
-  <p><strong>Khách hàng:</strong> {{ invoice.customer.full_name }}</p>
-  <p><strong>Tổng tiền hóa đơn:</strong> {{ invoice.final_amount|floatformat:0|intcomma }}đ</p>
-  <p><strong>Đã thanh toán:</strong> {{ invoice.paid_amount|floatformat:0|intcomma }}đ</p>
-  <p class="text-danger fs-4"><strong>Số tiền còn lại: {{ invoice.amount_due|floatformat:0|intcomma }}đ</strong></p>
-  <hr>
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Thanh toán cho Hóa đơn #{{ invoice.id }}</h1>
+</div>
 
-  <form method="post">
-    {% csrf_token %}
-    
-    {% if form.non_field_errors %}
-      <div class="alert alert-danger">
-        {% for error in form.non_field_errors %}
-          <p>{{ error }}</p>
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    <div class="mb-3">
-        <label for="{{ form.amount.id_for_label }}" class="form-label">{{ form.amount.label }}</label>
-        {{ form.amount }}
-        {% if form.amount.errors %}
-            <div class="text-danger mt-1">
-                {% for error in form.amount.errors %}
-                    <small>{{ error }}</small>
-                {% endfor %}
-            </div>
-        {% endif %}
+<div class="row">
+    <div class="col-md-6">
+        <h4>Thông tin hóa đơn</h4>
+        <p><strong>Khách hàng:</strong> {{ invoice.customer.full_name }}</p>
+        <p><strong>Tổng tiền:</strong> {{ invoice.final_amount|floatformat:0 }}đ</p>
+        <p><strong>Đã trả:</strong> {{ invoice.paid_amount|floatformat:0 }}đ</p>
+        <p class="fw-bold fs-5 text-danger">Còn lại: {{ invoice.amount_due|floatformat:0 }}đ</p>
     </div>
-
-    <div class="mb-3">
-        <label for="{{ form.payment_method.id_for_label }}" class="form-label">{{ form.payment_method.label }}</label>
-        {{ form.payment_method }}
-        {% if form.payment_method.errors %}
-            <div class="text-danger mt-1">
-                {% for error in form.payment_method.errors %}
-                    <small>{{ error }}</small>
-                {% endfor %}
+    <div class="col-md-6">
+        <h4>Nhập thông tin thanh toán</h4>
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="{{ form.amount_paid.id_for_label }}" class="form-label">Số tiền thanh toán</label>
+                {{ form.amount_paid }}
             </div>
-        {% endif %}
+            <div class="mb-3">
+                <label for="{{ form.payment_method.id_for_label }}" class="form-label">Phương thức thanh toán</label>
+                {{ form.payment_method }}
+            </div>
+            <button type="submit" class="btn btn-success">Xác nhận thanh toán</button>
+            <a href="{% url 'customer_detail' invoice.customer.id %}" class="btn btn-secondary">Quay lại</a>
+        </form>
     </div>
-
-    <button type="submit" class="btn btn-primary">Xác nhận Thanh toán</button>
-    <a href="{% url 'customer_detail' invoice.customer.pk %}" class="btn btn-secondary">Hủy</a>
-  </form>
+</div>
 {% endblock %}
