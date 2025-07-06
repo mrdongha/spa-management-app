@@ -14,6 +14,7 @@ from django.utils import timezone
 from decimal import Decimal
 import json
 from django.db import transaction
+from django.core.paginator import Paginator # Thêm import cho Paginator
 
 # ==============================================================================
 # CÁC HÀM VIEW CHÍNH CHO CÁC TRANG
@@ -25,8 +26,17 @@ def dashboard_view(request):
 
 # --- Quản lý Khách hàng ---
 def customer_list_view(request):
-    customers = Customer.objects.order_by('-created_at')
-    context = {'page_title': 'Danh sách Khách hàng', 'customers': customers}
+    customer_list = Customer.objects.order_by('-created_at')
+    
+    # Thiết lập phân trang, 20 khách hàng mỗi trang
+    paginator = Paginator(customer_list, 20) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_title': 'Danh sách Khách hàng', 
+        'customers': page_obj # Truyền đối tượng trang vào template
+    }
     return render(request, 'sales/customer_list.html', context)
 
 def add_customer_view(request):
