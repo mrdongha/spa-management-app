@@ -1,97 +1,21 @@
 {% extends 'sales/base.html' %}
-{% block title %}Tạo Hóa Đơn Mới{% endblock %}
+
+{% block title %}TRANG KIỂM TRA{% endblock %}
+
 {% block content %}
-<h1>Tạo Hóa Đơn Mới</h1>
+
+<div class="alert alert-warning" role="alert">
+  <h1 class="alert-heading">TRANG NÀY ĐANG Ở PHIÊN BẢN KIỂM TRA</h1>
+  <p>Nếu bạn thấy được nội dung này, có nghĩa là file template đã được cập nhật thành công trên máy chủ.</p>
+</div>
+
 <hr>
+
+<h3>Hiển thị Form ở dạng cơ bản nhất:</h3>
 <form method="post">
     {% csrf_token %}
-    <div class="row">
-        <div class="col-md-8">
-            <div class="mb-3"><label for="customer" class="form-label">Chọn Khách Hàng</label><select name="customer" id="customer" class="form-select" required><option value="">--- Vui lòng chọn ---</option>{% for customer in customers %}<option value="{{ customer.id }}">{{ customer.full_name }}</option>{% endfor %}</select></div>
-            <div class="mb-3"><label for="products" class="form-label">Chọn Sản Phẩm</label><select name="products" id="products" class="form-select" multiple size="5">{% for product in products %}<option value="{{ product.id }}" data-price="{{ product.price }}" {% if product.quantity_in_stock <= 0 %}disabled{% endif %}>{{ product.name }} - {{ product.price|floatformat:0 }}đ (Tồn: {{ product.quantity_in_stock }})</option>{% endfor %}</select></div>
-            <div class="mb-3"><label for="services" class="form-label">Chọn Dịch Vụ Lẻ</label><select name="services" id="services" class="form-select" multiple size="5">{% for service in services %}<option value="{{ service.id }}" data-price="{{ service.price }}">{{ service.name }} - {{ service.price|floatformat:0 }}đ</option>{% endfor %}</select></div>
-            <div class="mb-3"><label for="packages" class="form-label">Chọn Gói Dịch Vụ</label><select name="packages" id="packages" class="form-select" multiple size="5">{% for package in packages %}<option value="{{ package.id }}" data-price="{{ package.price }}">{{ package.name }} - {{ package.price|floatformat:0 }}đ</option>{% endfor %}</select></div>
-        </div>
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Tổng Cộng</h5><p>Tạm tính: <strong id="subtotal">0đ</strong></p><p>Giảm giá: <strong id="discount" class="text-danger">0đ</strong></p><hr><h4>Thành tiền: <strong id="total" class="text-success">0đ</strong></h4>
-                    <div class="input-group my-3"><input type="text" id="voucher-code" class="form-control" placeholder="Nhập mã voucher"><button class="btn btn-outline-secondary" type="button" id="apply-voucher-btn">Áp dụng</button></div>
-                    <div id="voucher-message"></div><input type="hidden" name="voucher_code_hidden" id="voucher-code-hidden"><button type="submit" class="btn btn-success w-100 mt-2">Lưu Hóa Đơn</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Submit</button>
 </form>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const productsSelect = document.getElementById('products');
-    const servicesSelect = document.getElementById('services');
-    const packagesSelect = document.getElementById('packages');
-    const subtotalEl = document.getElementById('subtotal');
-    const totalEl = document.getElementById('total');
-    // ... (các biến khác giữ nguyên)
-
-    function calculateTotal() {
-        let subtotal = 0;
-        for (const option of productsSelect.selectedOptions) { subtotal += parseFloat(option.dataset.price); }
-        for (const option of servicesSelect.selectedOptions) { subtotal += parseFloat(option.dataset.price); }
-        for (const option of packagesSelect.selectedOptions) { subtotal += parseFloat(option.dataset.price); }
-        // ... (phần còn lại của hàm giữ nguyên)
-    }
-
-    productsSelect.addEventListener('change', calculateTotal);
-    // ... (các event listener khác giữ nguyên)
-});
-// Dán lại toàn bộ script để đảm bảo chính xác
-document.addEventListener('DOMContentLoaded', function() {
-    const productsSelect = document.getElementById('products');
-    const servicesSelect = document.getElementById('services');
-    const packagesSelect = document.getElementById('packages');
-    const subtotalEl = document.getElementById('subtotal');
-    const totalEl = document.getElementById('total');
-    const discountEl = document.getElementById('discount');
-    const voucherInput = document.getElementById('voucher-code');
-    const applyBtn = document.getElementById('apply-voucher-btn');
-    const voucherMsg = document.getElementById('voucher-message');
-    const hiddenVoucherInput = document.getElementById('voucher-code-hidden');
-    let currentSubtotal = 0; let currentDiscount = 0;
-    function calculateTotal() {
-        let subtotal = 0;
-        for (const option of productsSelect.selectedOptions) { subtotal += parseFloat(option.dataset.price); }
-        for (const option of servicesSelect.selectedOptions) { subtotal += parseFloat(option.dataset.price); }
-        for (const option of packagesSelect.selectedOptions) { subtotal += parseFloat(option.dataset.price); }
-        currentSubtotal = subtotal;
-        const finalTotal = currentSubtotal - currentDiscount;
-        subtotalEl.textContent = new Intl.NumberFormat('vi-VN').format(currentSubtotal) + 'đ';
-        totalEl.textContent = new Intl.NumberFormat('vi-VN').format(finalTotal) + 'đ';
-    }
-    function applyVoucher() {
-        const code = voucherInput.value; if (!code) return;
-        fetch("{% url 'apply_voucher_api' %}", {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-            body: JSON.stringify({ code: code, subtotal: currentSubtotal })
-        }).then(res => res.json()).then(data => {
-            if (data.success) {
-                currentDiscount = parseFloat(data.discount_amount);
-                discountEl.textContent = '- ' + new Intl.NumberFormat('vi-VN').format(currentDiscount) + 'đ';
-                voucherMsg.innerHTML = `<span class="text-success">${data.message}</span>`;
-                hiddenVoucherInput.value = code;
-            } else {
-                currentDiscount = 0;
-                discountEl.textContent = '0đ';
-                voucherMsg.innerHTML = `<span class="text-danger">${data.message}</span>`;
-                hiddenVoucherInput.value = '';
-            }
-            calculateTotal();
-        });
-    }
-    productsSelect.addEventListener('change', calculateTotal);
-    servicesSelect.addEventListener('change', calculateTotal);
-    packagesSelect.addEventListener('change', calculateTotal);
-    applyBtn.addEventListener('click', applyVoucher);
-});
-</script>
 {% endblock %}
