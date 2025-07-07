@@ -28,18 +28,6 @@ class ServicePackage(models.Model):
     is_active = models.BooleanField(default=True)
     def __str__(self): return f"{self.name} ({self.total_sessions} buổi)"
 
-class Voucher(models.Model):
-    DISCOUNT_TYPES = [('percentage', 'Phần trăm'), ('fixed', 'Số tiền cố định'),]
-    code = models.CharField(max_length=50, unique=True)
-    discount_type = models.CharField(max_length=20, choices=DISCOUNT_TYPES)
-    value = models.DecimalField(max_digits=12, decimal_places=2)
-    is_active = models.BooleanField(default=True)
-    valid_from = models.DateTimeField(default=timezone.now)
-    valid_to = models.DateTimeField(null=True, blank=True)
-    def __str__(self):
-        if self.discount_type == 'percentage': return f"{self.code} - Giảm {self.value}%"
-        return f"{self.code} - Giảm {self.value:,.0f}đ"
-
 class Product(models.Model):
     name = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=12, decimal_places=2)
@@ -58,9 +46,7 @@ class Invoice(models.Model):
     STATUS_CHOICES = [('unpaid', 'Chưa thanh toán'), ('paid', 'Đã thanh toán'), ('cancelled', 'Đã hủy'),]
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='invoices')
     staff = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='invoices_created')
-    voucher_applied = models.ForeignKey(Voucher, on_delete=models.SET_NULL, null=True, blank=True)
     sub_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
-    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     final_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='unpaid')
@@ -74,7 +60,6 @@ class InvoiceDetail(models.Model):
     product = models.ForeignKey(Product, on_delete=models.PROTECT, null=True, blank=True)
     service = models.ForeignKey(Service, on_delete=models.PROTECT, null=True, blank=True)
     service_package = models.ForeignKey(ServicePackage, on_delete=models.PROTECT, null=True, blank=True)
-    gift_card = models.ForeignKey(GiftCard, on_delete=models.PROTECT, null=True, blank=True)
     item_type = models.CharField(max_length=20, default='service')
     quantity = models.PositiveIntegerField(default=1)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
@@ -83,7 +68,6 @@ class InvoiceDetail(models.Model):
         if self.item_type == 'service' and self.service: item_name = self.service.name
         elif self.item_type == 'package' and self.service_package: item_name = self.service_package.name
         elif self.item_type == 'product' and self.product: item_name = self.product.name
-        elif self.item_type == 'gift_card' and self.gift_card: item_name = self.gift_card.name
         return f"{item_name} (x{self.quantity}) on Invoice #{self.invoice.id}"
 
 class PackageUsageHistory(models.Model):
