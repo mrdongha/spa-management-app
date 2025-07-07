@@ -28,6 +28,18 @@ class ServicePackage(models.Model):
     is_active = models.BooleanField(default=True)
     def __str__(self): return f"{self.name} ({self.total_sessions} buổi)"
 
+class Voucher(models.Model):
+    DISCOUNT_TYPES = [('percentage', 'Phần trăm'), ('fixed', 'Số tiền cố định'),]
+    code = models.CharField(max_length=50, unique=True)
+    discount_type = models.CharField(max_length=20, choices=DISCOUNT_TYPES)
+    value = models.DecimalField(max_digits=12, decimal_places=2)
+    is_active = models.BooleanField(default=True)
+    valid_from = models.DateTimeField(default=timezone.now)
+    valid_to = models.DateTimeField(null=True, blank=True)
+    def __str__(self):
+        if self.discount_type == 'percentage': return f"{self.code} - Giảm {self.value}%"
+        return f"{self.code} - Giảm {self.value:,.0f}đ"
+
 class Product(models.Model):
     name = models.CharField(max_length=255)
     price = models.DecimalField(max_digits=12, decimal_places=2)
@@ -46,7 +58,9 @@ class Invoice(models.Model):
     STATUS_CHOICES = [('unpaid', 'Chưa thanh toán'), ('paid', 'Đã thanh toán'), ('cancelled', 'Đã hủy'),]
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='invoices')
     staff = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='invoices_created')
+    voucher_applied = models.ForeignKey(Voucher, on_delete=models.SET_NULL, null=True, blank=True)
     sub_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     final_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     paid_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='unpaid')

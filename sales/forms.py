@@ -31,7 +31,7 @@ class PaymentForm(forms.ModelForm):
         }
         widgets = {
             'amount_paid': forms.NumberInput(attrs={'class': 'form-control'}),
-            'payment_method': forms.Select(attrs={'class': 'form-control'}),
+            'payment_method': forms.Select(attrs={'class': 'form-select'}),
         }
 
 class ProductForm(forms.ModelForm):
@@ -62,11 +62,11 @@ class AppointmentForm(forms.ModelForm):
         model = Appointment
         fields = ['customer', 'start_time', 'end_time', 'service', 'status']
         widgets = {
-            'customer': forms.Select(attrs={'class': 'form-control'}),
+            'customer': forms.Select(attrs={'class': 'form-select'}),
             'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-            'service': forms.Select(attrs={'class': 'form-control'}),
-            'status': forms.Select(attrs={'class': 'form-control'}),
+            'service': forms.Select(attrs={'class': 'form-select'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
         }
 
 class ModalAppointmentForm(forms.ModelForm):
@@ -77,7 +77,7 @@ class ModalAppointmentForm(forms.ModelForm):
             'customer': forms.HiddenInput(),
             'start_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
             'end_time': forms.DateTimeInput(attrs={'class': 'form-control', 'type': 'datetime-local'}),
-            'service': forms.Select(attrs={'class': 'form-control'}),
+            'service': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.HiddenInput(),
         }
 
@@ -88,9 +88,8 @@ class InvoiceForm(forms.Form):
         label="Chọn Khách Hàng",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
-    # === TRƯỜNG MỚI ĐỂ CHỌN NHÂN VIÊN ===
     staff = forms.ModelChoiceField(
-        queryset=User.objects.filter(is_staff=True), # Lấy tất cả user là nhân viên
+        queryset=User.objects.filter(is_staff=True),
         label="Chọn Nhân viên tư vấn",
         widget=forms.Select(attrs={'class': 'form-select'})
     )
@@ -118,4 +117,10 @@ class InvoiceForm(forms.Form):
         required=False,
         widget=forms.RadioSelect,
         empty_label=None
+    )
+    # === TRƯỜNG MỚI ĐỂ NHẬP VOUCHER ===
+    voucher_code = forms.CharField(
+        label="Mã voucher",
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control'})
     )

@@ -1,4 +1,5 @@
 {% extends 'sales/base.html' %}
+{% load humanize %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -67,13 +68,19 @@
                         <span>Tổng dịch vụ:</span>
                         <span id="subtotal" class="fw-bold">0đ</span>
                     </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.voucher_code.id_for_label }}" class="form-label">{{ form.voucher_code.label }}</label>
+                        {{ form.voucher_code }}
+                    </div>
+
                     <hr>
                     <div class="d-flex justify-content-between fw-bold fs-5">
                         <span>Thanh toán bằng thẻ:</span>
                         <span id="payment-total" class="text-success">0đ</span>
                     </div>
                     <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary btn-lg">Tạo và Thanh toán</button>
+                        <button type="submit" class="btn btn-primary btn-lg">Tạo Hóa Đơn</button>
                     </div>
                 </div>
             </div>
@@ -94,12 +101,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function getPriceFromLabel(element) {
         const labelText = element.parentElement.querySelector('label').innerText;
+        // Cập nhật để lấy giá từ cả sản phẩm/dịch vụ và thẻ trả trước
         const priceMatch = labelText.match(/-\s+([\d,]+)đ/);
         if (priceMatch && priceMatch[1]) {
             return parseFloat(priceMatch[1].replace(/,/g, ''));
         }
-        // For gift cards without a price in the label, get it from data-price if needed, or handle differently
-        return parseFloat(element.dataset.price) || 0;
+        return 0;
     }
 
     function calculateTotal() {
