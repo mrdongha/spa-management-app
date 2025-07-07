@@ -1,0 +1,109 @@
+{% extends 'sales/base.html' %}
+{% load humanize %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<style>
+    .invoice-box {
+        max-width: 800px;
+        margin: auto;
+        padding: 30px;
+        border: 1px solid #eee;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+        font-size: 16px;
+        line-height: 24px;
+        font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
+        color: #555;
+    }
+    @media print {
+        body { -webkit-print-color-adjust: exact; }
+        .no-print { display: none !important; }
+        .invoice-box {
+            box-shadow: none;
+            border: none;
+        }
+    }
+</style>
+
+<div class="no-print d-flex justify-content-end mb-3">
+    <button onclick="window.print()" class="btn btn-sm btn-outline-secondary">🖨️ In hóa đơn</button>
+</div>
+
+<div class="invoice-box">
+    <div class="text-center mb-4">
+        <h2 class="fw-bold">SHINE BEAM</h2>
+        <p class="mb-0">Địa chỉ: [Điền địa chỉ của bạn vào đây]</p>
+        <p class="mb-0">Điện thoại: [Điền SĐT của bạn vào đây]</p>
+    </div>
+    <hr>
+    <h3 class="text-center mb-4">HÓA ĐƠN THANH TOÁN</h3>
+
+    <table class="table table-borderless">
+        <tbody>
+            <tr>
+                <td><strong>Khách hàng:</strong></td>
+                <td>{{ invoice.customer.full_name }}</td>
+                <td><strong>Ngày tạo:</strong></td>
+                <td>{{ invoice.created_at|date:"d/m/Y H:i" }}</td>
+            </tr>
+            <tr>
+                <td><strong>Nhân viên:</strong></td>
+                <td>{{ invoice.staff.username|default:"N/A" }}</td>
+                <td><strong>Hóa đơn số:</strong></td>
+                <td>#{{ invoice.id }}</td>
+            </tr>
+             <tr>
+                <td><strong>Số dư tín dụng:</strong></td>
+                <td class="fw-bold text-primary">{{ invoice.customer.credit_balance|floatformat:0|intcomma }}đ</td>
+                <td><strong>Trạng thái:</strong></td>
+                <td>
+                    {% if invoice.status == 'paid' %}<span class="badge bg-success">Đã thanh toán</span>
+                    {% elif invoice.status == 'unpaid' %}<span class="badge bg-warning text-dark">Chưa thanh toán</span>
+                    {% else %}<span class="badge bg-danger">Đã hủy</span>
+                    {% endif %}
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <hr>
+
+    <table class="table">
+        <thead class="table-light">
+            <tr>
+                <th>Sản phẩm/Dịch vụ</th>
+                <th class="text-end">Đơn giá</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for detail in invoice.details.all %}
+            <tr>
+                <td>
+                    {% if detail.product %}{{ detail.product.name }}{% endif %}
+                    {% if detail.service %}{{ detail.service.name }}{% endif %}
+                    {% if detail.service_package %}{{ detail.service_package.name }}{% endif %}
+                </td>
+                <td class="text-end">{{ detail.unit_price|floatformat:0|intcomma }}đ</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="d-flex justify-content-end">
+        <div class="w-50">
+            <div class="d-flex justify-content-between"><strong class="me-3">Tạm tính:</strong> {{ invoice.sub_total|floatformat:0|intcomma }}đ</div>
+            <div class="d-flex justify-content-between text-danger"><strong class="me-3">Giảm giá:</strong> -{{ invoice.discount_amount|floatformat:0|intcomma }}đ</div>
+            <hr>
+            <div class="d-flex justify-content-between fs-5 fw-bold"><strong class="me-3">Thành tiền:</strong> {{ invoice.final_amount|floatformat:0|intcomma }}đ</div>
+            <div class="d-flex justify-content-between fs-5 fw-bold text-success"><strong class="me-3">Đã thanh toán:</strong> {{ invoice.paid_amount|floatformat:0|intcomma }}đ</div>
+            <div class="d-flex justify-content-between fs-5 fw-bold text-danger">
+                <strong class="me-3">Cần thanh toán thêm:</strong> 
+                <span>
+                    {% if invoice.amount_due > 0 %}{{ invoice.amount_due|floatformat:0|intcomma }}đ
+                    {% else %}0đ{% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
