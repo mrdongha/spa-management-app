@@ -1,7 +1,7 @@
 {% extends 'sales/base.html' %}
 {% load humanize %}
 
-{% block title %}{{ page_title }}{% endblock %}
+{% block title %}Danh sách Khách hàng{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -45,14 +45,29 @@
 <nav aria-label="Page navigation">
     <ul class="pagination justify-content-center">
         {% if customers.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page=1">&laquo; Đầu</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ customers.previous_page_number }}">Trước</a></li>
+            <li class="page-item">
+                <a class="page-link" href="?page=1">&laquo; Đầu</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ customers.previous_page_number }}">Trước</a>
+            </li>
         {% endif %}
-        <li class="page-item disabled"><span class="page-link">Trang {{ customers.number }} của {{ customers.paginator.num_pages }}.</span></li>
+
+        <li class="page-item disabled">
+            <span class="page-link">
+                Trang {{ customers.number }} của {{ customers.paginator.num_pages }}.
+            </span>
+        </li>
+
         {% if customers.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ customers.next_page_number }}">Sau</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ customers.paginator.num_pages }}">Cuối &raquo;</a></li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ customers.next_page_number }}">Sau</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ customers.paginator.num_pages }}">Cuối &raquo;</a>
+            </li>
         {% endif %}
     </ul>
 </nav>
+
 {% endblock %}
