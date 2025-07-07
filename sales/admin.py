@@ -1,6 +1,5 @@
 # sales/admin.py
 from django.contrib import admin
-# THÊM 'GiftCard' VÀO DÒNG IMPORT DƯỚI ĐÂY
 from .models import (
     Customer, Service, ServicePackage, Voucher, Product, 
     Invoice, InvoiceDetail, PackageUsageHistory, Payment, 
@@ -11,7 +10,7 @@ from .models import (
 admin.site.register(Customer)
 admin.site.register(Service)
 admin.site.register(ServicePackage)
-admin.site.register(Voucher)
+admin.site.register(Voucher) # Đảm bảo dòng này đã có
 admin.site.register(Product)
 admin.site.register(Invoice)
 admin.site.register(InvoiceDetail)
