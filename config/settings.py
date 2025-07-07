@@ -57,3 +57,67 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 if not DEBUG:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+## Bước 2: File sales/views.py (Hoàn chỉnh)
+Xóa toàn bộ nội dung file và thay thế bằng code sau:
+
+Python
+
+# sales/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse, HttpResponse
+from .models import *
+from .forms import *
+from django.utils import timezone
+from decimal import Decimal
+import json
+from django.db import transaction
+from django.core.paginator import Paginator
+from django.db.models import Sum, Q
+from django.db.models.functions import TruncDate, TruncMonth
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def dashboard_view(request):
+    context = {'page_title': 'Trang tổng quan'}
+    return render(request, 'sales/dashboard.html', context)
+
+@login_required
+def customer_list_view(request):
+    customer_list = Customer.objects.annotate(
+        total_spent=Sum('invoices__final_amount', filter=Q(invoices__status='paid'))
+    ).order_by('-created_at')
+    paginator = Paginator(customer_list, 20) 
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    context = {'page_title': 'Danh sách Khách hàng', 'customers': page_obj}
+    return render(request, 'sales/customer_list.html', context)
+
+@login_required
+def customer_detail_view(request, customer_id):
+    customer = get_object_or_404(Customer, id=customer_id)
+    usage_history = PackageUsageHistory.objects.filter(customer=customer).select_related('invoice_detail__service_package').order_by('-used_at')
+    context = {
+        'page_title': f'Chi tiết: {customer.full_name}', 
+        'customer': customer,
+        'usage_history': usage_history
+    }
+    return render(request, 'sales/customer_detail.html', context)
+
+# ... (Toàn bộ các hàm view khác của bạn đều chính xác, hãy đảm bảo chúng được giữ nguyên)
+# Ví dụ hàm report_view:
+@login_required
+def report_view(request):
+    paid_invoices = Invoice.objects.filter(status='paid')
+    total_revenue = paid_invoices.aggregate(total=Sum('final_amount'))['total'] or 0
+    invoice_count = paid_invoices.count()
+    daily_revenue = paid_invoices.annotate(day=TruncDate('created_at')).values('day').annotate(daily_total=Sum('final_amount')).order_by('-day')
+    monthly_revenue = paid_invoices.annotate(month=TruncMonth('created_at')).values('month').annotate(monthly_total=Sum('final_amount')).order_by('-month')
+    context = {
+        'page_title': 'Báo cáo & Thống kê',
+        'total_revenue': total_revenue,
+        'invoice_count': invoice_count,
+        'daily_revenue': daily_revenue,
+        'monthly_revenue': monthly_revenue,
+    }
+    return render(request, 'sales/reports.html', context)
+# Và các hàm khác...
