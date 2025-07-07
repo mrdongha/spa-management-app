@@ -106,4 +106,82 @@ def edit_service_view(request, service_id):
 def product_list_view(request):
     products = Product.objects.filter(is_active=True).order_by('name')
     context = { 'page_title': 'Danh sách sản phẩm', 'products': products }
-    return render(request,
+    return render(request, 'sales/product_list.html', context)
+
+@login_required
+def add_product_view(request):
+    if request.method == 'POST':
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('product_list')
+    else:
+        form = ProductForm()
+    context = { 'form': form, 'page_title': 'Thêm sản phẩm mới' }
+    return render(request, 'sales/add_product.html', context)
+
+@login_required
+def edit_product_view(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+    if request.method == 'POST':
+        form = ProductForm(request.POST, instance=product)
+        if form.is_valid():
+            form.save()
+            return redirect('product_list')
+    else:
+        form = ProductForm(instance=product)
+    context = { 'form': form, 'page_title': f'Sửa sản phẩm: {product.name}' }
+    return render(request, 'sales/edit_product.html', context)
+    
+# --- Các trang chức năng khác ---
+@login_required
+def calendar_view(request):
+    context = {'page_title': 'Lịch hẹn'}
+    return render(request, 'sales/calendar.html', context)
+
+@login_required
+def report_view(request):
+    paid_invoices = Invoice.objects.filter(status='paid')
+    
+    total_revenue = paid_invoices.aggregate(total=Sum('final_amount'))['total'] or 0
+    invoice_count = paid_invoices.count()
+
+    daily_revenue = paid_invoices.annotate(day=TruncDate('created_at')) \
+                                 .values('day') \
+                                 .annotate(daily_total=Sum('final_amount')) \
+                                 .order_by('-day')
+
+    monthly_revenue = paid_invoices.annotate(month=TruncMonth('created_at')) \
+                                   .values('month') \
+                                   .annotate(monthly_total=Sum('final_amount')) \
+                                   .order_by('-month')
+
+    context = {
+        'page_title': 'Báo cáo & Thống kê',
+        'total_revenue': total_revenue,
+        'invoice_count': invoice_count,
+        'daily_revenue': daily_revenue,
+        'monthly_revenue': monthly_revenue,
+    }
+    return render(request, 'sales/reports.html', context)
+    
+@login_required
+def staff_report_view(request):
+    staff_revenue = User.objects.annotate(
+        total_revenue=Sum('invoices_created__final_amount', filter=Q(invoices_created__status='paid'))
+    ).filter(total_revenue__gt=0).order_by('-total_revenue')
+    
+    context = {
+        'page_title': 'Báo cáo doanh thu theo nhân viên',
+        'staff_revenue': staff_revenue
+    }
+    return render(request, 'sales/staff_report.html', context)
+
+@login_required
+def add_appointment_view(request):
+    if request.method == 'POST':
+        form = AppointmentForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('dashboard_view')
+    else:
