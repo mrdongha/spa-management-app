@@ -1,5 +1,4 @@
 {% extends 'sales/base.html' %}
-{% load humanize %}
 
 {% block title %}{{ page_title }}{% endblock %}
 
@@ -17,12 +16,8 @@
         color: #555;
     }
     @media print {
-        body { -webkit-print-color-adjust: exact; }
-        .no-print { display: none !important; }
-        .invoice-box {
-            box-shadow: none;
-            border: none;
-        }
+        body > nav.no-print, .no-print { display: none !important; }
+        .invoice-box { box-shadow: none; border: none; margin: 0; padding: 0; }
     }
 </style>
 
@@ -39,23 +34,18 @@
     <hr>
     <h3 class="text-center mb-4">HÓA ĐƠN THANH TOÁN</h3>
 
-    <table class="table table-borderless">
+    <table class="table table-borderless table-sm mb-4">
         <tbody>
             <tr>
-                <td><strong>Khách hàng:</strong></td>
-                <td>{{ invoice.customer.full_name }}</td>
-                <td><strong>Ngày tạo:</strong></td>
-                <td>{{ invoice.created_at|date:"d/m/Y H:i" }}</td>
+                <td><strong>Khách hàng:</strong></td><td>{{ invoice.customer.full_name }}</td>
+                <td><strong>Hóa đơn số:</strong></td><td>#{{ invoice.id }}</td>
             </tr>
             <tr>
-                <td><strong>Nhân viên:</strong></td>
-                <td>{{ invoice.staff.username|default:"N/A" }}</td>
-                <td><strong>Hóa đơn số:</strong></td>
-                <td>#{{ invoice.id }}</td>
+                <td><strong>Nhân viên:</strong></td><td>{{ invoice.staff.username|default:"N/A" }}</td>
+                <td><strong>Ngày tạo:</strong></td><td>{{ invoice.created_at|date:"d/m/Y H:i" }}</td>
             </tr>
              <tr>
-                <td><strong>Số dư tín dụng:</strong></td>
-                <td class="fw-bold text-primary">{{ invoice.customer.credit_balance|floatformat:0|intcomma }}đ</td>
+                <td><strong>Số dư tín dụng:</strong></td><td class="fw-bold text-primary">{{ invoice.customer.credit_balance|floatformat:0|intcomma }}đ</td>
                 <td><strong>Trạng thái:</strong></td>
                 <td>
                     {% if invoice.status == 'paid' %}<span class="badge bg-success">Đã thanh toán</span>
@@ -66,8 +56,7 @@
             </tr>
         </tbody>
     </table>
-    <hr>
-
+    
     <table class="table">
         <thead class="table-light">
             <tr>
@@ -89,18 +78,25 @@
         </tbody>
     </table>
 
-    <div class="d-flex justify-content-end">
+    <div class="d-flex justify-content-end mt-4">
         <div class="w-50">
-            <div class="d-flex justify-content-between"><strong class="me-3">Tạm tính:</strong> {{ invoice.sub_total|floatformat:0|intcomma }}đ</div>
-            <div class="d-flex justify-content-between text-danger"><strong class="me-3">Giảm giá:</strong> -{{ invoice.discount_amount|floatformat:0|intcomma }}đ</div>
+            <div class="d-flex justify-content-between">
+                <strong class="me-3">Tạm tính:</strong> <span>{{ invoice.sub_total|floatformat:0|intcomma }}đ</span>
+            </div>
+            <div class="d-flex justify-content-between text-danger">
+                <strong class="me-3">Giảm giá:</strong> <span>-{{ invoice.discount_amount|floatformat:0|intcomma }}đ</span>
+            </div>
             <hr>
-            <div class="d-flex justify-content-between fs-5 fw-bold"><strong class="me-3">Thành tiền:</strong> {{ invoice.final_amount|floatformat:0|intcomma }}đ</div>
-            <div class="d-flex justify-content-between fs-5 fw-bold text-success"><strong class="me-3">Đã thanh toán:</strong> {{ invoice.paid_amount|floatformat:0|intcomma }}đ</div>
+            <div class="d-flex justify-content-between fs-5 fw-bold">
+                <strong class="me-3">Thành tiền:</strong> <span>{{ invoice.final_amount|floatformat:0|intcomma }}đ</span>
+            </div>
+            <div class="d-flex justify-content-between fs-5 fw-bold text-success">
+                <strong class="me-3">Đã thanh toán:</strong> <span>{{ invoice.paid_amount|floatformat:0|intcomma }}đ</span>
+            </div>
             <div class="d-flex justify-content-between fs-5 fw-bold text-danger">
                 <strong class="me-3">Cần thanh toán thêm:</strong> 
                 <span>
-                    {% if invoice.amount_due > 0 %}{{ invoice.amount_due|floatformat:0|intcomma }}đ
-                    {% else %}0đ{% endif %}
+                    {% if invoice.amount_due > 0 %}{{ invoice.amount_due|floatformat:0|intcomma }}đ{% else %}0đ{% endif %}
                 </span>
             </div>
         </div>
