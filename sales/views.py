@@ -202,27 +202,7 @@ def create_invoice_view(request):
                 services = form.cleaned_data['services']
                 packages = form.cleaned_data['packages']
                 gift_card_payment = form.cleaned_data['gift_card']
-                voucher_code = form.cleaned_data.get('voucher_code')
-
-                sub_total = sum(p.price for p in products) + sum(s.price for s in services) + sum(pkg.price for pkg in packages)
-                
-                # Xử lý Voucher
-                discount_amount = Decimal('0')
-                voucher_applied = None
-                if voucher_code:
-                    try:
-                        now = timezone.now()
-                        voucher = Voucher.objects.get(code__iexact=voucher_code, is_active=True, valid_from__lte=now)
-                        if not voucher.valid_to or voucher.valid_to >= now:
-                            voucher_applied = voucher
-                            if voucher.discount_type == 'percentage':
-                                discount_amount = (sub_total * voucher.value) / 100
-                            elif voucher.discount_type == 'fixed':
-                                discount_amount = voucher.value
-                    except Voucher.DoesNotExist:
-                        pass # Bỏ qua nếu voucher không hợp lệ
-
-                final_amount = sub_total - discount_amount
+                final_amount = sum(p.price for p in products) + sum(s.price for s in services) + sum(pkg.price for pkg in packages)
                 
                 amount_paid_from_credit = min(customer_to_update.credit_balance, final_amount)
                 payment_for_gift_card = gift_card_payment.value if gift_card_payment else Decimal('0')
@@ -231,9 +211,7 @@ def create_invoice_view(request):
                 invoice = Invoice.objects.create(
                     customer=customer_to_update,
                     staff=staff_data,
-                    sub_total=sub_total,
-                    discount_amount=discount_amount,
-                    voucher_applied=voucher_applied,
+                    sub_total=final_amount,
                     final_amount=final_amount,
                     paid_amount=paid_amount,
                     status='paid' if paid_amount >= final_amount else 'unpaid'
@@ -331,6 +309,37 @@ def use_package_view(request, invoice_detail_id):
 # CÁC HÀM VIEW CHO API
 # ==============================================================================
 
-# API này không còn cần thiết nếu xử lý voucher ở backend
-# def apply_voucher_api(request):
-#     ...
+def all_appointments_json(request):
+    appointments = Appointment.objects.all().select_related('customer', 'service')
+    data = []
+    for appointment in appointments:
+        service_name = appointment.service.name if appointment.service else "Dịch vụ đã xóa"
+        data.append({'title': f"{appointment.customer.full_name} - {service_name}", 'start': appointment.start_time.isoformat(), 'end': appointment.end_time.isoformat(), 'id': appointment.id})
+    return JsonResponse(data, safe=False)
+
+def appointment_form_content(request):
+    form = ModalAppointmentForm()
+    return render(request, 'sales/partials/appointment_form_modal.html', {'form': form})
+    
+@login_required
+def create_appointment_api(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            customer = Customer.objects.get(id=data.get('customer'))
+            service = Service.objects.get(id=data.get('service'))
+            appointment = Appointment.objects.create(customer=customer, service=service, start_time=data.get('start_time'), end_time=data.get('end_time'), notes=data.get('notes', ''), status='scheduled')
+            return JsonResponse({'status': 'success', 'message': 'Lịch hẹn đã được tạo thành công!', 'appointment_id': appointment.id})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+    
+@login_required
+def apply_voucher_api(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            voucher_code = data.get('voucher_code')
+            sub_total = Decimal(data.get('sub_total', '0'))
+            if not voucher_code:
+                return JsonResponse({'status':
